@@ -3,7 +3,7 @@
 const sw = self as unknown as ServiceWorkerGlobalScope;
 
 const CACHE = "arrival-fruit";
-const SHELL = ["./", "index.html", "app.js", "pdf.worker.min.mjs", "manifest.json", "icon.svg"];
+const SHELL = ["./", "app.js", "pdf.worker.min.mjs", "manifest.json", "icon.svg"];
 
 sw.addEventListener("install", (e) => {
   e.waitUntil(

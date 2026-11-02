@@ -7,7 +7,8 @@ villa -> room type -> bedrooms -> fruit.
   Defaults are assumptions (1 fruit per bedroom; RL3/RP3 = 3, RD2 = 2, others = 1). A code missing from the
   table is guessed from its digit (RP4 = 4, else 1) and flagged "new type".
 - Sharer rows are merged per villa. Standby villas (0 nights) are skipped and listed.
-- **Evidence**: every counted row is boxed red on the rendered PDF page, with the room type and the result.
+- **Phone-first, one screen**: sticky total, one compact row per villa, settings in a bottom sheet.
+- **Evidence**: tap a villa to see its PDF rows cut out with red boxes and the fruit math; the "PDF pages" tab shows full pages.
 - The PDF never leaves the device (pdf.js in the browser). The Worker serves static files only.
   Report PDFs hold guest data: `*.pdf` is git-ignored and listed in `public/.assetsignore` so it is never deployed.
 

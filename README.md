@@ -9,6 +9,11 @@ villa -> room type -> bedrooms -> fruit.
 - Sharer rows are merged per villa. Standby villas (0 nights) are skipped and listed.
 - **Phone-first, one screen**: sticky total, one compact row per villa, settings in a bottom sheet.
 - **Evidence**: tap a villa to see its PDF rows cut out with red boxes and the fruit math; the "PDF pages" tab shows full pages.
+- **Downloads** (top bar): `fruit-order_YYYY-MM-DD.pdf`, a printable A4 order with a tick box per villa, and
+  `fruit-evidence_YYYY-MM-DD.pdf`, the same order pages followed by the report with red boxes. Named by arrival day.
+  pdf-lib is loaded only when someone downloads.
+- **Memory**: settings live in localStorage; the last report lives in IndexedDB (binary, can pass localStorage's
+  size limit) and reopens at start. Settings > "Forget this report" removes it.
 - The PDF never leaves the device (pdf.js in the browser). The Worker serves static files only.
   Report PDFs hold guest data: `*.pdf` is git-ignored and listed in `public/.assetsignore` so it is never deployed.
 

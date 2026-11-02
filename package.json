@@ -4,7 +4,7 @@
   "version": "0.1.0",
   "type": "module",
   "scripts": {
-    "build": "bun build src/app.ts src/sw.ts --outdir public --target browser --minify && cp node_modules/pdfjs-dist/build/pdf.worker.min.mjs public/",
+    "build": "rm -f public/chunk-*.js && bun build src/app.ts src/sw.ts --outdir public --target browser --minify --splitting --chunk-naming=chunk-[hash].[ext] && cp node_modules/pdfjs-dist/build/pdf.worker.min.mjs public/",
     "dev": "bun run build && wrangler dev",
     "test": "bun test",
     "typecheck": "tsc --noEmit",
@@ -16,6 +16,7 @@
   },
   "packageManager": "bun@1.4.4",
   "dependencies": {
+    "pdf-lib": "^1.17.1",
     "pdfjs-dist": "^6.5.438"
   },
   "devDependencies": {

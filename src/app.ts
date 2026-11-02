@@ -2,6 +2,7 @@ import { cropRow, markPage } from "./evidence";
 import { parseRows, type Row, summarize, type Villa } from "./parse";
 import { type Line, openPdf, type PageImage, type PDFDocumentProxy, readLines, renderPage } from "./pdf";
 import { DEFAULTS, loadSettings, type Settings, sanitize, saveSettings } from "./settings";
+import { clearReport, loadReport, saveReport } from "./store";
 
 const SCALE = 2.5; // crisp crops on phone screens
 const $ = <T extends HTMLElement = HTMLElement>(id: string) => document.getElementById(id) as T;
@@ -10,6 +11,8 @@ const esc = (s: string | number) =>
 const plural = (n: number, one: string, many = `${one}s`) => `${n} ${n === 1 ? one : many}`;
 
 let doc: PDFDocumentProxy | null = null;
+let original: Uint8Array | null = null; // pdf.js takes ownership of the buffer it reads, so keep a copy for exports
+let fileName = "";
 let lines: Line[] = [];
 let rows: Row[] = [];
 let pages = new Map<number, PageImage>(); // clean renders, one per page with guest rows
@@ -95,6 +98,8 @@ function render() {
   $("empty").hidden = true;
   $("result").hidden = false;
   $("result-head").hidden = false;
+  $("downloadBtn").hidden = false;
+  $("forgetReport").hidden = false;
   $("tFruit").textContent = String(s.totals.fruit);
   $("tVillas").textContent = String(s.totals.villas);
   $("tBeds").textContent = String(s.totals.bedrooms);
@@ -205,28 +210,89 @@ $("list").addEventListener(
   true,
 );
 
-document.addEventListener("change", async (e) => {
-  const input = e.target as HTMLInputElement;
-  const file = input.type === "file" ? input.files?.[0] : undefined;
-  if (!file) return;
-  $("status").textContent = `Reading ${file.name}…`;
+// Reads a report into the app state. pdf.js takes ownership of the buffer it gets, so it reads a copy.
+async function showReport(name: string, bytes: Uint8Array, note: string) {
+  $("status").textContent = `Reading ${name}…`;
   try {
-    const pdf = await openPdf(await file.arrayBuffer());
+    const pdf = await openPdf(bytes.slice().buffer);
     lines = await readLines(pdf);
     rows = parseRows(lines.map((l) => l.text));
     const needed = [...new Set(rows.map((r) => lines[r.line].page))];
     pages = new Map(await Promise.all(needed.map(async (p) => [p, await renderPage(pdf, p, SCALE)] as const)));
     doc = pdf;
+    original = bytes;
+    fileName = name;
     openRooms.clear();
-    $("source").textContent = `${file.name}${rows[0] ? `, arrivals ${rows[0].arrival}` : ""}`;
+    $("source").textContent = `${name}${rows[0] ? `, arrivals ${rows[0].arrival}` : ""}${note}`;
     $("status").textContent = "";
     showTab("villas");
   } catch (err) {
-    $("status").textContent = `Could not read ${file.name}: ${err instanceof Error ? err.message : String(err)}`;
+    $("status").textContent = `Could not read ${name}: ${err instanceof Error ? err.message : String(err)}`;
   }
-  input.value = "";
   render();
+}
+
+function forgetReport() {
+  doc = null;
+  original = null;
+  lines = [];
+  rows = [];
+  pages = new Map();
+  marked = new Map();
+  for (const id of ["result", "result-head", "downloadBtn", "forgetReport"]) $(id).hidden = true;
+  $("empty").hidden = false;
+  $<HTMLDialogElement>("settings").close();
+  clearReport().catch(() => {}); // nothing saved, or storage blocked: nothing to forget
+}
+
+document.addEventListener("change", async (e) => {
+  const input = e.target as HTMLInputElement;
+  const file = input.type === "file" ? input.files?.[0] : undefined;
+  if (!file) return;
+  const bytes = new Uint8Array(await file.arrayBuffer());
+  input.value = "";
+  await showReport(file.name, bytes, "");
+  if (!doc) return;
+  try {
+    await saveReport({ name: file.name, bytes, savedAt: Date.now() });
+  } catch {
+    $("source").textContent += " (not saved: storage is blocked on this browser)";
+  }
+});
+
+$("forgetReport").addEventListener("click", forgetReport);
+
+async function download(kind: "order" | "evidence", button: HTMLButtonElement) {
+  if (!doc || !original) return;
+  button.setAttribute("aria-busy", "true");
+  try {
+    const { evidencePdf, exportName, orderPdf } = await import("./export"); // pdf-lib loads only when needed
+    const input = { fileName, lines, summary: summarize(rows, settings), settings };
+    const bytes = kind === "order" ? await orderPdf(input) : await evidencePdf(original, input);
+    const url = URL.createObjectURL(new Blob([bytes as BlobPart], { type: "application/pdf" }));
+    const a = Object.assign(document.createElement("a"), { href: url, download: exportName(kind, input.summary) });
+    a.click();
+    setTimeout(() => URL.revokeObjectURL(url), 60_000);
+    $("downloads").hidePopover();
+  } catch (err) {
+    $("status").textContent = `Could not make the ${kind} PDF: ${err instanceof Error ? err.message : String(err)}`;
+  } finally {
+    button.removeAttribute("aria-busy");
+  }
+}
+
+$("downloads").addEventListener("click", (e) => {
+  const button = (e.target as HTMLElement).closest<HTMLButtonElement>("[data-download]");
+  const kind = button?.dataset.download;
+  if (button && (kind === "order" || kind === "evidence")) download(kind, button);
 });
 
 render();
+loadReport()
+  .then((saved) => {
+    if (!saved) return;
+    const when = new Date(saved.savedAt).toLocaleString("en-GB", { dateStyle: "medium", timeStyle: "short" });
+    return showReport(saved.name, saved.bytes, `. Reopened from this phone, opened ${when}.`);
+  })
+  .catch(() => {}); // storage blocked or empty: start on the open screen
 if ("serviceWorker" in navigator) navigator.serviceWorker.register("sw.js");

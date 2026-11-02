@@ -103,6 +103,13 @@
     figcaption { color: var(--muted); font-size: .8125rem; margin-bottom: 4px; }
     figure canvas { display: block; width: 100%; height: auto; border: 1px solid var(--line); border-radius: 6px; background: #fff; }
 
+    /* download menu, anchored under the top bar */
+    .menu { position: fixed; inset: auto; top: calc(env(safe-area-inset-top) + var(--bar-h) + 4px); right: 12px; margin: 0; padding: 6px; border: 1px solid var(--line); border-radius: 12px; background: var(--surface); color: var(--ink); box-shadow: 0 8px 24px oklch(0.2 0.02 175 / 0.16); width: min(300px, calc(100vw - 24px)); }
+    .menu button { display: flex; flex-direction: column; align-items: flex-start; gap: 2px; width: 100%; min-height: 52px; padding: 8px 12px; border: 0; border-radius: 8px; background: none; text-align: left; cursor: pointer; }
+    .menu button:hover, .menu button:focus-visible { background: var(--accent-soft); }
+    .menu button[aria-busy=true] { opacity: .6; cursor: progress; }
+    .menu span { font-size: .8125rem; color: var(--muted); }
+
     /* settings sheet */
     dialog { border: 0; padding: 0; width: min(560px, 100%); max-height: 88dvh; margin: auto auto 0; border-radius: 16px 16px 0 0; background: var(--surface); color: var(--ink); }
     @media (min-width: 640px) { dialog { margin: auto; border-radius: 16px; } }
@@ -140,7 +147,14 @@
       <button type="button" class="btn icon-only" data-open-settings aria-label="Settings">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M4 7h10M18 7h2M4 17h4M12 17h8"/><circle cx="16" cy="7" r="2"/><circle cx="10" cy="17" r="2"/></svg>
       </button>
+      <button type="button" id="downloadBtn" class="btn icon-only" popovertarget="downloads" aria-label="Download PDFs" hidden>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 4v11M7 10l5 5 5-5M5 20h14"/></svg>
+      </button>
       <label class="btn primary">Open PDF<input id="file" type="file" accept="application/pdf"></label>
+    </div>
+    <div id="downloads" popover class="menu">
+      <button type="button" data-download="order"><b>Fruit order</b><span>Printable list for the kitchen</span></button>
+      <button type="button" data-download="evidence"><b>Evidence</b><span>Order plus the report with red boxes</span></button>
     </div>
     <div id="result-head" hidden>
       <div class="summary" aria-live="polite">
@@ -162,7 +176,7 @@
     <p id="status" class="status" role="status"></p>
     <section id="empty" class="empty">
       <h2>Open today's Enhanced Pre Arrival Report</h2>
-      <p>You get the fruit to order for each villa, with the PDF row boxed in red as proof. The PDF stays on this phone.</p>
+      <p>You get the fruit to order for each villa, with the PDF row boxed in red as proof. The PDF stays on this phone, and the app remembers it until you open a new one.</p>
       <label class="btn primary">Open PDF<input type="file" accept="application/pdf"></label>
     </section>
     <section id="result" hidden>
@@ -197,8 +211,11 @@
         <input id="newBeds" type="number" inputmode="numeric" min="0" max="99" value="1" aria-label="Bedrooms">
         <button type="button" id="addBtn" class="btn">Add</button>
       </div>
+      <h3>This phone</h3>
+      <p class="hint">The last report you opened is kept on this phone and reopens next time. Nothing is uploaded.</p>
+      <button type="button" id="forgetReport" class="link" hidden>Forget this report</button>
       <footer>
-        <button type="button" id="resetSettings" class="link">Reset to defaults</button>
+        <button type="button" id="resetSettings" class="link">Reset settings</button>
         <button type="submit" class="btn primary">Done</button>
       </footer>
     </form>

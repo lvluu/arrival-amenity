@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Arrival Fruit</title>
+  <link rel="manifest" href="manifest.json">
+  <link rel="icon" href="icon.svg">
+  <meta name="theme-color" content="#2f5d50">
+  <style>
+    :root { --bg: #fff; --fg: #1d1d1b; --muted: #6b6b66; --line: #e3e1da; --accent: #2f5d50; --warn: #a15c00; --warn-bg: #fff4e0; }
+    @media (prefers-color-scheme: dark) { :root { --bg: #161615; --fg: #ecebe6; --muted: #9c9b95; --line: #33322f; --accent: #7fb8a6; --warn: #f0b860; --warn-bg: #3a2c12; } }
+    * { box-sizing: border-box; }
+    body { margin: 0; padding: 16px; background: var(--bg); color: var(--fg); font: 16px/1.4 system-ui, sans-serif; max-width: 720px; margin-inline: auto; }
+    h1 { font-size: 1.3rem; margin: 0 0 12px; }
+    .controls { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; margin-bottom: 16px; }
+    label.file { background: var(--accent); color: var(--bg); padding: 10px 16px; border-radius: 8px; cursor: pointer; font-weight: 600; }
+    label.file input { display: none; }
+    input[type=number] { width: 4em; font: inherit; padding: 6px; border: 1px solid var(--line); border-radius: 6px; background: var(--bg); color: var(--fg); }
+    .totals { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin: 12px 0; }
+    .totals div { border: 1px solid var(--line); border-radius: 8px; padding: 8px; text-align: center; }
+    .totals b { display: block; font-size: 1.5rem; }
+    .totals .fruit b { color: var(--accent); }
+    table { width: 100%; border-collapse: collapse; font-variant-numeric: tabular-nums; }
+    th, td { padding: 8px 6px; border-bottom: 1px solid var(--line); text-align: left; }
+    th { color: var(--muted); font-weight: 500; font-size: .85rem; }
+    td.n, th.n { text-align: right; }
+    td.names { color: var(--muted); font-size: .85rem; }
+    tr.warn td { background: var(--warn-bg); }
+    .note { color: var(--warn); font-size: .85rem; }
+    .muted { color: var(--muted); font-size: .9rem; }
+    h2 { font-size: 1.1rem; margin: 24px 0 4px; }
+    tr[data-page] { cursor: pointer; }
+    figure { margin: 12px 0; }
+    figcaption { color: var(--muted); font-size: .85rem; }
+    #evidence canvas { width: 100%; height: auto; border: 1px solid var(--line); background: #fff; }
+    @media (max-width: 480px) { td.names, th.names { display: none; } }
+  </style>
+</head>
+<body>
+  <h1>Arrival Fruit</h1>
+  <div class="controls">
+    <label class="file">Open arrival PDF<input id="file" type="file" accept="application/pdf"></label>
+    <label>Fruit per bedroom <input id="perBed" type="number" min="0" step="1" value="1"></label>
+  </div>
+  <p id="status" class="muted">PDF stays on this device. Nothing is uploaded.</p>
+  <div id="out"></div>
+  <div id="evidence"></div>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+  <script type="module" src="app.js"></script>
+</body>
+</html>

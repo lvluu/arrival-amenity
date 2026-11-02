@@ -1,0 +1,8 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "arrival-fruit",
+  "compatibility_date": "2026-10-01",
+  // Static assets only: the PDF is parsed in the browser and never reaches the Worker.
+  "assets": { "directory": "./public" },
+  "preview_urls": false
+}

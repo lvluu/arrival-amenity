@@ -1,0 +1,18 @@
+# One toolchain for every machine and agent: `mise install`, then `mise run check`.
+[tools]
+bun = "1.4.4"
+
+[tasks.install]
+run = "bun install --frozen-lockfile"
+
+[tasks.dev]
+description = "Build, then serve on http://localhost:8787"
+run = "bun run dev"
+
+[tasks.check]
+description = "Gate for every change: typecheck + lint + format check + tests"
+run = "bun run check"
+
+[tasks.deploy]
+description = "Build and deploy the Worker (static assets)"
+run = "bun run deploy"

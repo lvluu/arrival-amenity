@@ -31,7 +31,5 @@ are git-ignored. The service worker is network-first, so a new deploy reaches on
 
 ## Deploy
 
-Every push to `main` runs `.github/workflows/ci.yml`: check + build, then `wrangler deploy`. Pull requests run the
-check only. One-time setup: a Cloudflare API token from the "Edit Cloudflare Workers" template, stored as repo secret
-`CLOUDFLARE_API_TOKEN` (`gh secret set CLOUDFLARE_API_TOKEN -R lvluu/arrival-fruit`). The account id is the repo
-variable `CLOUDFLARE_ACCOUNT_ID`. `mise run deploy` still works by hand.
+Manual: `mise run deploy` (build, then `wrangler deploy`). CI (`.github/workflows/ci.yml`) runs check + build on every
+push and pull request; it does not deploy.

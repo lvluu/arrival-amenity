@@ -1,15 +1,25 @@
 import type { Villa } from "./parse";
+import { fields } from "./fields";
 import { box, type Line, type PageImage } from "./pdf";
 
 const RED = "#d10000";
 
-const typeItems = (line: Line, roomType: string) => line.items.filter((i) => i.str.split(/\s+/).includes(roomType));
+const plural = (n: number, one: string, many = `${one}s`) => `${n} ${n === 1 ? one : many}`;
 
 export function label(v: Villa): string {
-  return `${v.room}: ${v.roomType} = ${v.bedrooms} bedroom${v.bedrooms === 1 ? "" : "s"}, ${v.fruit} fruit`;
+  return `${v.room}: ${v.roomType} = ${plural(v.bedrooms, "bedroom")}, ${plural(v.guests, "guest")}`;
 }
 
-// Copy of a clean page with every counted row boxed red and the room type labelled.
+// The villa's main booking row: the first one with guests. Its room type gives the bedrooms.
+export const mainLine = (v: Villa): number =>
+  v.lines[
+    Math.max(
+      0,
+      v.rowGuests.findIndex((g) => g > 0),
+    )
+  ];
+
+// Copy of a clean page: every counted row boxed red; on the main row the room type is boxed thick and labelled.
 export function markPage(src: PageImage, page: number, villas: Villa[], lines: Line[]): HTMLCanvasElement {
   const canvas = Object.assign(document.createElement("canvas"), {
     width: src.canvas.width,
@@ -19,15 +29,16 @@ export function markPage(src: PageImage, page: number, villas: Villa[], lines: L
   if (!ctx) throw new Error("canvas 2d context unavailable");
   ctx.drawImage(src.canvas, 0, 0);
   const s = src.viewport.scale;
+  ctx.strokeStyle = RED;
   for (const v of villas) {
     for (const l of v.lines.filter((l) => lines[l].page === page)) {
-      ctx.strokeStyle = RED;
       ctx.lineWidth = 1.4 * s;
       ctx.strokeRect(...box(src.viewport, lines[l].items));
-      const items = typeItems(lines[l], v.roomType);
-      if (!items.length) continue;
-      const [x, y, w, h] = box(src.viewport, items);
+      const f = fields(lines[l], v.roomType);
       ctx.lineWidth = 2.6 * s;
+      if (f.guests.length) ctx.strokeRect(...box(src.viewport, f.guests)); // adults + children: every row adds up
+      if (l !== mainLine(v) || !f.type.length) continue;
+      const [x, y, w, h] = box(src.viewport, f.type); // room type: bedrooms, from the main booking row
       ctx.strokeRect(x, y, w, h);
       const text = label(v);
       ctx.font = `600 ${11 * s}px system-ui, sans-serif`;
@@ -40,13 +51,13 @@ export function markPage(src: PageImage, page: number, villas: Villa[], lines: L
   return canvas;
 }
 
-// Proof strip for one guest row, sized for a phone: "room + name" above "dates .. type .. counts".
+// Proof strip for one guest row, sized for a phone: "room + name" above "dates .. type .. adults, children".
 // Cut from the marked page, so the red boxes come along.
 export function cropRow(marked: HTMLCanvasElement, src: PageImage, line: Line, roomType: string): HTMLCanvasElement {
   const s = src.viewport.scale;
   const dateAt = line.items.findIndex((i) => /\d\d\/\d\d\/\d\d/.test(i.str));
   const head = line.items.slice(0, dateAt < 0 ? 2 : dateAt).filter((i) => !/^[CTS]-/.test(i.str.trim()));
-  const types = typeItems(line, roomType);
+  const types = fields(line, roomType).type;
   const tail = dateAt < 0 ? [] : line.items.slice(dateAt);
   const row = box(src.viewport, line.items);
   const top = row[1] - 2 * s;
@@ -67,4 +78,10 @@ export function cropRow(marked: HTMLCanvasElement, src: PageImage, line: Line, r
   ctx.fillRect(0, 0, out.width, out.height);
   for (const [i, [x, w]] of slices.entries()) ctx.drawImage(marked, x, top, w, height, 0, i * height, w, height);
   return out;
+}
+
+// iOS Safari caps total canvas memory; zero the size to give it back right away.
+export function release(canvas: HTMLCanvasElement): void {
+  canvas.width = 0;
+  canvas.height = 0;
 }

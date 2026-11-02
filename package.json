@@ -4,7 +4,7 @@
   "version": "0.1.0",
   "type": "module",
   "scripts": {
-    "build": "rm -f public/chunk-*.js && bun build src/app.ts src/sw.ts --outdir public --target browser --minify --splitting --chunk-naming=chunk-[hash].[ext] && cp node_modules/pdfjs-dist/build/pdf.worker.min.mjs public/",
+    "build": "bun scripts/build.ts",
     "dev": "bun run build && wrangler dev",
     "test": "bun test",
     "typecheck": "tsc --noEmit",
@@ -22,6 +22,7 @@
   "devDependencies": {
     "@biomejs/biome": "2.6.4",
     "@types/bun": "^1.4.4",
+    "playwright-core": "1.63.0",
     "typescript": "7.0.2",
     "wrangler": "4.156.0"
   }

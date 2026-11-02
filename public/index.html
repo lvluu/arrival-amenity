@@ -4,9 +4,12 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <title>Arrival Fruit</title>
-  <meta name="description" content="Fruit order per villa from the Enhanced Pre Arrival Report, with proof on the PDF.">
+  <meta name="description" content="Bedrooms and guests per arriving villa from the Enhanced Pre Arrival Report, with proof on the PDF.">
   <link rel="manifest" href="manifest.json">
   <link rel="icon" href="icon.svg">
+  <link rel="apple-touch-icon" href="icon.svg">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-title" content="Arrival Fruit">
   <meta name="theme-color" content="#1f5e55">
   <style>
     :root {
@@ -21,47 +24,50 @@
       --on-accent: oklch(0.99 0 0);
       --warn-ink: oklch(0.45 0.12 55);
       --warn-bg: oklch(0.95 0.045 80);
-      --proof: #d10000;
       --radius: 10px;
       --bar-h: 56px;
       --z-sticky: 10;
       font: 16px/1.4 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+      -webkit-text-size-adjust: 100%;
     }
     * { box-sizing: border-box; }
     body { margin: 0; background: var(--bg); color: var(--ink); -webkit-tap-highlight-color: transparent; }
-    button, input { font: inherit; color: inherit; }
+    button, input, textarea { font: inherit; color: inherit; }
     :focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
     [hidden] { display: none !important; }
 
-    /* top bar: title, settings, open */
+    /* top bar: title, settings, downloads, open */
     .top { position: sticky; top: 0; z-index: var(--z-sticky); background: var(--surface); border-bottom: 1px solid var(--line); padding-top: env(safe-area-inset-top); }
     .bar { display: flex; align-items: center; gap: 8px; height: var(--bar-h); padding: 0 12px; max-width: 760px; margin: 0 auto; }
-    .bar h1 { font-size: 1.05rem; font-weight: 650; margin: 0; margin-right: auto; letter-spacing: -0.01em; }
-    .btn { display: inline-flex; align-items: center; justify-content: center; gap: 6px; min-height: 44px; padding: 0 16px; border-radius: var(--radius); border: 1px solid var(--line); background: var(--surface); font-weight: 600; cursor: pointer; transition: background-color .15s ease-out; }
+    .bar h1 { font-size: 1.05rem; font-weight: 650; margin: 0; margin-right: auto; letter-spacing: -0.01em; white-space: nowrap; }
+    .btn { display: inline-flex; align-items: center; justify-content: center; gap: 6px; min-height: 44px; padding: 0 16px; border-radius: var(--radius); border: 1px solid var(--line); background: var(--surface); font-weight: 600; cursor: pointer; transition: background-color .15s ease-out; white-space: nowrap; }
     .btn:hover { background: var(--accent-soft); }
     .btn.primary { background: var(--accent); border-color: var(--accent); color: var(--on-accent); }
     .btn.primary:hover { background: oklch(0.38 0.075 175); }
-    .btn.icon-only { width: 44px; padding: 0; }
+    .btn.icon-only { width: 44px; padding: 0; flex: none; }
     .btn input[type=file] { position: absolute; width: 1px; height: 1px; opacity: 0; }
     .btn:focus-within { outline: 3px solid var(--accent); outline-offset: 2px; }
     .btn svg { width: 20px; height: 20px; }
+    .btn:disabled { opacity: .6; }
     body:has(#empty:not([hidden])) .bar .btn.primary { display: none; } /* first screen has its own big button */
 
-    /* summary + tabs, sticky with the bar */
-    .summary { display: flex; align-items: center; gap: 16px; padding: 6px 12px 8px; max-width: 760px; margin: 0 auto; }
-    .total { display: flex; align-items: baseline; gap: 6px; }
-    .total b { font-size: 2.25rem; line-height: 1; font-weight: 750; color: var(--accent); font-variant-numeric: tabular-nums; letter-spacing: -0.02em; }
+    /* new version bar */
+    .update { display: flex; align-items: center; gap: 12px; justify-content: space-between; padding: 8px 12px; background: var(--accent); color: var(--on-accent); font-size: .9375rem; font-weight: 600; }
+    .update .btn { min-height: 36px; background: var(--on-accent); color: var(--accent); border: 0; }
+
+    /* totals + tabs, sticky with the bar */
+    .summary { display: flex; align-items: flex-end; gap: 20px; padding: 6px 12px 8px; max-width: 760px; margin: 0 auto; }
+    .total { display: flex; align-items: baseline; gap: 5px; }
+    .total b { font-size: 2.1rem; line-height: 1; font-weight: 750; color: var(--accent); font-variant-numeric: tabular-nums; letter-spacing: -0.02em; }
     .total span { font-weight: 600; }
-    .stats { display: flex; gap: 14px; margin: 0; color: var(--muted); font-size: .875rem; }
-    .stats div { display: flex; flex-direction: column; }
-    .stats dt { order: 2; }
-    .stats dd { margin: 0; font-weight: 650; color: var(--ink); font-size: 1rem; font-variant-numeric: tabular-nums; }
+    .villas-count { margin-left: auto; color: var(--muted); font-size: .875rem; }
+    .villas-count b { color: var(--ink); }
     .tabs { display: flex; gap: 4px; padding: 0 12px; max-width: 760px; margin: 0 auto; }
     .tabs [role=tab] { flex: 1; min-height: 40px; border: 0; background: none; border-bottom: 3px solid transparent; font-weight: 600; color: var(--muted); cursor: pointer; }
     .tabs [role=tab][aria-selected=true] { color: var(--ink); border-bottom-color: var(--accent); }
 
     main { max-width: 760px; margin: 0 auto; padding: 8px 12px calc(24px + env(safe-area-inset-bottom)); }
-    .status { color: var(--muted); font-size: .875rem; margin: 8px 0; min-height: 1.2em; }
+    .status { color: var(--muted); font-size: .875rem; margin: 8px 0; }
     .status:empty { display: none; }
 
     /* first screen */
@@ -73,12 +79,12 @@
     .source { color: var(--muted); font-size: .8125rem; margin: 0 0 6px; overflow-wrap: anywhere; }
     .flag { display: inline-block; background: var(--warn-bg); color: var(--warn-ink); font-size: .8125rem; font-weight: 600; padding: 2px 8px; border-radius: 6px; margin: 0 0 6px; }
     .sub .flag { margin: 4px 6px 0 0; padding: 1px 6px; font-size: .75rem; }
-    .link { background: none; border: 0; padding: 0; color: inherit; text-decoration: underline; font-weight: 650; cursor: pointer; min-height: 0; }
+    .link { background: none; border: 0; padding: 0; color: inherit; text-decoration: underline; font-weight: 650; cursor: pointer; }
 
-    /* villa list */
+    /* villa list: one row per villa, bedrooms and guests on the right */
     .list { list-style: none; margin: 0; padding: 0; background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); overflow: hidden; }
     .list li + li { border-top: 1px solid var(--line); }
-    summary { display: grid; grid-template-columns: 1fr auto; grid-template-areas: "villa fruit" "sub fruit"; column-gap: 12px; align-items: center; padding: 6px 12px; min-height: 52px; cursor: pointer; list-style: none; transition: background-color .15s ease-out; }
+    summary { display: grid; grid-template-columns: 1fr auto auto; grid-template-areas: "villa beds guests" "sub beds guests"; column-gap: 10px; align-items: center; padding: 6px 12px; min-height: 52px; cursor: pointer; list-style: none; transition: background-color .15s ease-out; }
     summary::-webkit-details-marker { display: none; }
     summary:hover { background: var(--accent-soft); }
     details[open] summary { background: var(--accent-soft); }
@@ -87,31 +93,26 @@
     .type { font-size: .8125rem; font-weight: 650; color: var(--accent); background: var(--accent-soft); padding: 0 6px; border-radius: 5px; }
     details[open] .type { background: var(--surface); }
     .sub { grid-area: sub; color: var(--muted); font-size: .8125rem; }
-    .fruit { grid-area: fruit; display: flex; flex-direction: column; align-items: center; min-width: 44px; }
-    .fruit b { font-size: 1.5rem; line-height: 1; font-variant-numeric: tabular-nums; }
-    .fruit span { font-size: .6875rem; color: var(--muted); }
+    .num { display: flex; flex-direction: column; align-items: center; min-width: 52px; }
+    .num.beds { grid-area: beds; }
+    .num.guests { grid-area: guests; }
+    .num b { font-size: 1.4rem; line-height: 1; font-variant-numeric: tabular-nums; }
+    .num span { font-size: .6875rem; color: var(--muted); }
     .proof { padding: 4px 12px 12px; }
     .why { margin: 2px 0 6px; font-weight: 600; font-size: .875rem; }
     .strip { display: flex; align-items: flex-end; gap: 8px; margin-top: 6px; }
     .strip canvas { display: block; flex: 1; min-width: 0; height: auto; border: 1px solid var(--line); border-radius: 6px; background: #fff; }
-    .strip .page-link { flex: none; padding: 0; }
-    .page-link { background: none; border: 0; color: var(--accent); font-weight: 600; font-size: .8125rem; padding: 8px 0; min-height: 36px; cursor: pointer; text-decoration: underline; }
-    .standby { color: var(--muted); font-size: .8125rem; margin: 10px 2px 0; }
-    .standby:empty { display: none; }
+    .page-link { background: none; border: 0; color: var(--accent); font-weight: 600; font-size: .8125rem; padding: 0; min-height: 36px; cursor: pointer; text-decoration: underline; flex: none; }
+    .after-list { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 6px 12px; margin: 10px 2px 0; color: var(--muted); font-size: .8125rem; }
+    .after-list p { margin: 0; }
+    .after-list p:empty { display: none; }
 
     figure { margin: 0 0 16px; }
     figcaption { color: var(--muted); font-size: .8125rem; margin-bottom: 4px; }
     figure canvas { display: block; width: 100%; height: auto; border: 1px solid var(--line); border-radius: 6px; background: #fff; }
 
-    /* download menu, anchored under the top bar */
-    .menu { position: fixed; inset: auto; top: calc(env(safe-area-inset-top) + var(--bar-h) + 4px); right: 12px; margin: 0; padding: 6px; border: 1px solid var(--line); border-radius: 12px; background: var(--surface); color: var(--ink); box-shadow: 0 8px 24px oklch(0.2 0.02 175 / 0.16); width: min(300px, calc(100vw - 24px)); }
-    .menu button { display: flex; flex-direction: column; align-items: flex-start; gap: 2px; width: 100%; min-height: 52px; padding: 8px 12px; border: 0; border-radius: 8px; background: none; text-align: left; cursor: pointer; }
-    .menu button:hover, .menu button:focus-visible { background: var(--accent-soft); }
-    .menu button[aria-busy=true] { opacity: .6; cursor: progress; }
-    .menu span { font-size: .8125rem; color: var(--muted); }
-
-    /* settings sheet */
-    dialog { border: 0; padding: 0; width: min(560px, 100%); max-height: 88dvh; margin: auto auto 0; border-radius: 16px 16px 0 0; background: var(--surface); color: var(--ink); }
+    /* sheets: settings, downloads, report a problem */
+    dialog { border: 0; padding: 0; width: min(560px, 100%); max-width: 100%; max-height: 88dvh; margin: auto auto 0; border-radius: 16px 16px 0 0; background: var(--surface); color: var(--ink); }
     @media (min-width: 640px) { dialog { margin: auto; border-radius: 16px; } }
     dialog::backdrop { background: oklch(0.2 0.02 175 / 0.45); }
     dialog[open] { animation: rise .22s cubic-bezier(.22, 1, .36, 1); }
@@ -121,49 +122,56 @@
     .sheet h2 { font-size: 1.15rem; margin: 0; }
     .sheet h3 { font-size: .9375rem; margin: 16px 0 6px; }
     .hint { color: var(--muted); font-size: .8125rem; margin: 0 0 10px; }
-    .rule { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
-    .rule label { display: flex; flex-direction: column; gap: 4px; font-size: .8125rem; color: var(--muted); }
-    input[type=number], input[type=text] { width: 100%; min-height: 44px; padding: 0 10px; border: 1px solid var(--line); border-radius: 8px; background: var(--surface); font-variant-numeric: tabular-nums; }
-    .types { list-style: none; padding: 0; margin: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 6px; }
+    input[type=number], input[type=text], textarea { width: 100%; min-height: 44px; padding: 0 10px; border: 1px solid var(--line); border-radius: 8px; background: var(--surface); font-variant-numeric: tabular-nums; font-size: 16px; } /* 16px: iPhone does not zoom in */
+    textarea { padding: 10px; resize: vertical; min-height: 96px; }
+    .types { list-style: none; padding: 0; margin: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 6px; }
     .types li { display: flex; align-items: center; gap: 4px; border: 1px solid var(--line); border-radius: 8px; padding: 2px 2px 2px 10px; }
-    .types label { display: flex; align-items: center; gap: 8px; flex: 1; }
+    .types li.new { border-color: var(--warn-ink); background: var(--warn-bg); }
+    .types label { display: flex; align-items: center; gap: 6px; flex: 1; flex-wrap: wrap; }
     .types b { min-width: 3.2em; font-size: .9375rem; }
-    .types input { min-height: 40px; border: 0; background: var(--bg); }
+    .types input { min-height: 40px; border: 0; background: var(--bg); flex: 1; min-width: 3em; }
+    .badge { font-size: .6875rem; font-weight: 700; color: var(--warn-ink); width: 100%; order: 3; }
     .icon { width: 40px; height: 40px; border: 0; background: none; font-size: 1.25rem; color: var(--muted); cursor: pointer; border-radius: 6px; }
     .icon:hover { background: var(--accent-soft); color: var(--ink); }
+    .ok { height: 40px; padding: 0 10px; border: 0; border-radius: 6px; background: var(--accent); color: var(--on-accent); font-weight: 700; cursor: pointer; }
     .add { display: flex; gap: 6px; margin-top: 8px; }
     .add input[type=text] { flex: 2; text-transform: uppercase; }
     .add input::placeholder { text-transform: none; }
     .add input[type=number] { flex: 1; }
-    .sheet footer { display: flex; justify-content: space-between; align-items: center; margin-top: 16px; }
+    .sheet footer { display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-top: 16px; }
+    .version { color: var(--muted); font-size: .75rem; margin: 12px 0 0; }
+    .choice { display: flex; flex-direction: column; align-items: flex-start; gap: 2px; width: 100%; min-height: 56px; padding: 10px 12px; margin-top: 8px; border: 1px solid var(--line); border-radius: 10px; background: var(--surface); text-align: left; cursor: pointer; }
+    .choice:hover { background: var(--accent-soft); }
+    .choice span { font-size: .8125rem; color: var(--muted); }
+    .choice[aria-busy=true] { opacity: .6; cursor: progress; }
+    .check { display: flex; gap: 10px; align-items: flex-start; margin: 10px 0 4px; font-size: .9375rem; }
+    .check input { width: 22px; height: 22px; margin: 0; flex: none; accent-color: var(--accent); }
+    .error, .sent { font-size: .875rem; margin: 8px 0 0; min-height: 1.2em; }
 
     @media (prefers-reduced-motion: reduce) { *, dialog[open] { animation: none !important; transition: none !important; } }
   </style>
 </head>
 <body>
   <div class="top">
+    <div id="updateBar" class="update" role="status" hidden>
+      <span>A new version is ready.</span>
+      <button type="button" id="updateBtn" class="btn">Update</button>
+    </div>
     <div class="bar">
       <h1>Arrival fruit</h1>
-      <button type="button" class="btn icon-only" data-open-settings aria-label="Settings">
+      <button type="button" class="btn icon-only" data-open="settings" aria-label="Settings">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M4 7h10M18 7h2M4 17h4M12 17h8"/><circle cx="16" cy="7" r="2"/><circle cx="10" cy="17" r="2"/></svg>
       </button>
-      <button type="button" id="downloadBtn" class="btn icon-only" popovertarget="downloads" aria-label="Download PDFs" hidden>
+      <button type="button" id="downloadBtn" class="btn icon-only" data-open="downloads" aria-label="Download PDFs" hidden>
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 4v11M7 10l5 5 5-5M5 20h14"/></svg>
       </button>
-      <label class="btn primary">Open PDF<input id="file" type="file" accept="application/pdf"></label>
-    </div>
-    <div id="downloads" popover class="menu">
-      <button type="button" data-download="order"><b>Fruit order</b><span>Printable list for the kitchen</span></button>
-      <button type="button" data-download="evidence"><b>Evidence</b><span>Order plus the report with red boxes</span></button>
+      <label class="btn primary">Open PDF<input id="file" type="file" accept="application/pdf,.pdf"></label>
     </div>
     <div id="result-head" hidden>
       <div class="summary" aria-live="polite">
-        <div class="total"><b id="tFruit">0</b><span>fruit</span></div>
-        <dl class="stats">
-          <div><dt>villas</dt><dd id="tVillas">0</dd></div>
-          <div><dt>bedrooms</dt><dd id="tBeds">0</dd></div>
-          <div><dt>adults</dt><dd id="tAdults">0</dd></div>
-        </dl>
+        <div class="total"><b id="tBeds">0</b><span>bedrooms</span></div>
+        <div class="total"><b id="tGuests">0</b><span>guests</span></div>
+        <div class="villas-count"><b id="tVillas">0</b> villas</div>
       </div>
       <div class="tabs" role="tablist" aria-label="View">
         <button type="button" role="tab" data-tab="villas" aria-selected="true" aria-controls="panel-villas">Villas</button>
@@ -176,15 +184,18 @@
     <p id="status" class="status" role="status"></p>
     <section id="empty" class="empty">
       <h2>Open today's Enhanced Pre Arrival Report</h2>
-      <p>You get the fruit to order for each villa, with the PDF row boxed in red as proof. The PDF stays on this phone, and the app remembers it until you open a new one.</p>
-      <label class="btn primary">Open PDF<input type="file" accept="application/pdf"></label>
+      <p>You get the bedrooms and guests for each arriving villa, with the PDF row boxed in red as proof. The PDF stays on this phone, and the app remembers it until you open a new one.</p>
+      <label class="btn primary">Open PDF<input type="file" accept="application/pdf,.pdf"></label>
     </section>
     <section id="result" hidden>
       <p id="source" class="source"></p>
       <div id="panel-villas" role="tabpanel">
         <div id="notes"></div>
         <ul id="list" class="list"></ul>
-        <p id="standby" class="standby"></p>
+        <div class="after-list">
+          <p id="skipped"></p>
+          <button type="button" class="link" data-open="report">Something wrong? Report it</button>
+        </div>
       </div>
       <div id="panel-pages" role="tabpanel" hidden>
         <div id="fullPages"></div>
@@ -198,25 +209,51 @@
         <h2 id="settingsTitle">Settings</h2>
         <button type="submit" class="icon" aria-label="Close settings">×</button>
       </header>
-      <p class="hint">Saved on this phone. Fruit per villa = bedrooms × per bedroom + adults × per adult + per villa.</p>
-      <div class="rule">
-        <label>Per bedroom <input id="fruitPerBedroom" type="number" inputmode="numeric" min="0" max="99"></label>
-        <label>Per adult <input id="fruitPerAdult" type="number" inputmode="numeric" min="0" max="99"></label>
-        <label>Per villa <input id="fruitPerVilla" type="number" inputmode="numeric" min="0" max="99"></label>
-      </div>
       <h3>Bedrooms per room type</h3>
+      <p class="hint">New room types from a report are added with the number in their code. Check them and tap OK, or change the number. Saved on this phone.</p>
       <ul id="roomTypes" class="types"></ul>
       <div id="addType" class="add">
-        <input id="newCode" type="text" placeholder="New code" pattern="[A-Za-z][A-Za-z0-9]{0,9}" aria-label="New room type code" autocapitalize="characters">
+        <input id="newCode" type="text" placeholder="New code" pattern="[A-Za-z][A-Za-z0-9]{0,9}" aria-label="New room type code" autocapitalize="characters" autocomplete="off">
         <input id="newBeds" type="number" inputmode="numeric" min="0" max="99" value="1" aria-label="Bedrooms">
         <button type="button" id="addBtn" class="btn">Add</button>
       </div>
       <h3>This phone</h3>
-      <p class="hint">The last report you opened is kept on this phone and reopens next time. Nothing is uploaded.</p>
+      <p class="hint">The last report you opened is kept on this phone and reopens next time. Nothing is uploaded unless you report a problem.</p>
       <button type="button" id="forgetReport" class="link" hidden>Forget this report</button>
       <footer>
-        <button type="button" id="resetSettings" class="link">Reset settings</button>
+        <button type="button" id="resetSettings" class="link">Reset room types</button>
+        <button type="button" class="link" data-open="report">Report a problem</button>
         <button type="submit" class="btn primary">Done</button>
+      </footer>
+      <p id="version" class="version"></p>
+    </form>
+  </dialog>
+
+  <dialog id="downloads" aria-labelledby="downloadsTitle">
+    <form method="dialog" class="sheet">
+      <header>
+        <h2 id="downloadsTitle">Download</h2>
+        <button type="submit" class="icon" aria-label="Close downloads">×</button>
+      </header>
+      <button type="button" class="choice" data-download="order"><b>Fruit order</b><span>Printable list: bedrooms and guests per villa</span></button>
+      <button type="button" class="choice" data-download="evidence"><b>Evidence</b><span>The list plus the report with red boxes</span></button>
+      <p id="downloadError" class="error" role="alert"></p>
+    </form>
+  </dialog>
+
+  <dialog id="report" aria-labelledby="reportTitle">
+    <form method="dialog" class="sheet">
+      <header>
+        <h2 id="reportTitle">Report a problem</h2>
+        <button type="submit" class="icon" aria-label="Close">×</button>
+      </header>
+      <label for="bugText" class="hint">What is wrong? Name the villa and what you expected.</label>
+      <textarea id="bugText" rows="4" placeholder="Example: villa 1010 should have 4 guests, not 3"></textarea>
+      <label id="bugPdfRow" class="check"><input type="checkbox" id="bugPdf" checked> <span>Send the report PDF and what the app showed. The PDF has guest names; it is deleted after 90 days.</span></label>
+      <p id="bugStatus" class="sent" role="status"></p>
+      <footer>
+        <button type="submit" class="link">Cancel</button>
+        <button type="button" id="bugSend" class="btn primary">Send report</button>
       </footer>
     </form>
   </dialog>

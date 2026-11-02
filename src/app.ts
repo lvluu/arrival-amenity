@@ -1,58 +1,86 @@
-import { cropRow, markPage } from "./evidence";
-import { parseRows, type Row, summarize, type Villa } from "./parse";
+import { sendBug } from "./bug-report";
+import { type Kind, prepare, save } from "./downloads";
+import { cropRow, mainLine, markPage, release } from "./evidence";
+import { parseRows, type Row, type Summary, summarize, type Villa } from "./parse";
 import { type Line, openPdf, type PageImage, type PDFDocumentProxy, readLines, renderPage } from "./pdf";
-import { DEFAULTS, loadSettings, type Settings, sanitize, saveSettings } from "./settings";
+import { confirm, DEFAULTS, loadSettings, type Settings, sanitize, saveSettings, withDetected } from "./settings";
 import { clearReport, loadReport, saveReport } from "./store";
+import { watchUpdates } from "./updates";
 
-const SCALE = 2.5; // crisp crops on phone screens
+const SCALE = 2; // sharp crops on phones, within iPhone Safari's canvas memory limit
 const $ = <T extends HTMLElement = HTMLElement>(id: string) => document.getElementById(id) as T;
 const esc = (s: string | number) =>
   String(s).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c] ?? c);
 const plural = (n: number, one: string, many = `${one}s`) => `${n} ${n === 1 ? one : many}`;
+const message = (err: unknown) => (err instanceof Error ? err.message : String(err));
 
 let doc: PDFDocumentProxy | null = null;
-let original: Uint8Array | null = null; // pdf.js takes ownership of the buffer it reads, so keep a copy for exports
+let original: Uint8Array | null = null; // the report as opened, for exports and bug reports
 let fileName = "";
 let lines: Line[] = [];
 let rows: Row[] = [];
 let pages = new Map<number, PageImage>(); // clean renders, one per page with guest rows
-let marked = new Map<number, HTMLCanvasElement>(); // same pages with red boxes for the current settings
-let villas: Villa[] = [];
+const marked = new Map<number, HTMLCanvasElement>(); // red-boxed copies, made when first needed
+let summary: Summary = summarize([], DEFAULTS);
 let settings = loadSettings();
+let files: Record<Kind, Promise<File>> | null = null; // download PDFs for the current result
 const openRooms = new Set<string>();
 
-function villaItem(v: Villa): string {
-  const flags = [
-    v.sharerOnly ? `<span class="flag">Check booking: sharer only</span>` : "",
-    v.knownType ? "" : `<span class="flag">New type: guessed</span>`,
-  ].join("");
+function clearMarked() {
+  for (const c of marked.values()) release(c);
+  marked.clear();
+}
+
+function markedPage(p: number): HTMLCanvasElement | null {
+  const src = pages.get(p);
+  if (!src) return null;
+  const hit = marked.get(p) ?? markPage(src, p, summary.villas, lines);
+  marked.set(p, hit);
+  return hit;
+}
+
+// ---- villas ----
+
+function guestWords(v: Villa): string {
   const kids = v.children ? `, ${plural(v.children, "child", "children")}` : "";
+  return `${plural(v.adults, "adult")}${kids}`;
+}
+
+function villaItem(v: Villa): string {
+  const sum = v.lines.length > 1 ? `, ${v.lines.length} rows: ${v.rowGuests.join(" + ")}` : "";
+  const flag = v.checkType ? `<span class="flag">New type: check bedrooms</span>` : "";
   return `<li><details data-room="${esc(v.room)}"${openRooms.has(v.room) ? " open" : ""}>
     <summary>
       <span class="villa"><b>${esc(v.room)}</b><span class="type">${esc(v.roomType)}</span></span>
-      <span class="sub">${plural(v.bedrooms, "bedroom")}, ${plural(v.adults, "adult")}${kids}, ${plural(v.nights, "night")}${flags}</span>
-      <span class="fruit"><b>${v.fruit}</b><span>fruit</span></span>
+      <span class="sub">${guestWords(v)}${sum}${flag}</span>
+      <span class="num beds"><b>${v.bedrooms}</b><span>bedroom${v.bedrooms === 1 ? "" : "s"}</span></span>
+      <span class="num guests"><b>${v.guests}</b><span>guest${v.guests === 1 ? "" : "s"}</span></span>
     </summary>
     <div class="proof"></div>
   </details></li>`;
 }
 
 function fillProof(d: HTMLDetailsElement) {
-  const v = villas.find((x) => x.room === d.dataset.room);
+  const v = summary.villas.find((x) => x.room === d.dataset.room);
   const proof = d.querySelector(".proof");
-  if (!v || !proof || proof.querySelector("canvas")) return;
+  if (!v || !proof || proof.childElementCount) return;
   const why = document.createElement("p");
   why.className = "why";
-  why.textContent = `${v.roomType} = ${plural(v.bedrooms, "bedroom")}${v.knownType ? "" : " (guessed from the code)"}. ${rule(v)}`;
-  proof.prepend(why);
+  const beds = `${v.roomType} = ${plural(v.bedrooms, "bedroom")}${v.checkType ? " (new type, taken from the code: check it in settings)" : ""}.`;
+  const guests =
+    v.lines.length > 1
+      ? ` Guests: ${v.rowGuests.join(" + ")} = ${v.guests}. Rows with 0 guests are sharers.`
+      : ` Guests: ${guestWords(v)}.`;
+  why.textContent = beds + guests;
+  proof.append(why);
   for (const l of v.lines) {
     const { page } = lines[l];
     const src = pages.get(page);
-    const m = marked.get(page);
+    const m = markedPage(page);
     if (!src || !m) continue;
     const strip = cropRow(m, src, lines[l], v.roomType);
     strip.setAttribute("role", "img");
-    strip.setAttribute("aria-label", `PDF row for ${lines[l].text.slice(0, 60)}, boxed in red`);
+    strip.setAttribute("aria-label", `PDF row ${l === mainLine(v) ? "(main booking) " : ""}boxed in red`);
     const link = Object.assign(document.createElement("button"), {
       type: "button",
       className: "page-link",
@@ -66,58 +94,56 @@ function fillProof(d: HTMLDetailsElement) {
   }
 }
 
-// The fruit math for one villa, in words, only with the parts that apply.
-function rule(v: Villa): string {
-  const parts = [
-    settings.fruitPerBedroom ? `${v.bedrooms} × ${settings.fruitPerBedroom}` : "",
-    settings.fruitPerAdult ? `${v.adults} adults × ${settings.fruitPerAdult}` : "",
-    settings.fruitPerVilla ? `${settings.fruitPerVilla} per villa` : "",
-  ].filter(Boolean);
-  return `${parts.join(" + ") || "0"} = ${plural(v.fruit, "fruit", "fruit")}.`;
-}
-
 function renderPages() {
-  $("fullPages").replaceChildren(
-    ...[...marked].map(([p, c]) => {
-      const fig = document.createElement("figure");
-      fig.id = `page-${p}`;
-      fig.innerHTML = `<figcaption>Page ${p} of ${doc?.numPages}</figcaption>`;
+  const figs = [...pages.keys()].map((p) => {
+    const fig = document.createElement("figure");
+    fig.id = `page-${p}`;
+    fig.innerHTML = `<figcaption>Page ${p} of ${doc?.numPages}</figcaption>`;
+    const c = markedPage(p);
+    if (c) {
       c.setAttribute("role", "img");
       c.setAttribute("aria-label", `Report page ${p} with counted rows boxed in red`);
       fig.append(c);
-      return fig;
-    }),
-  );
+    }
+    return fig;
+  });
+  $("fullPages").replaceChildren(...figs);
 }
 
 function render() {
+  const detected = withDetected(
+    settings,
+    rows.map((r) => r.roomType),
+  ); // new room types get a default to check
+  if (detected !== settings) {
+    settings = detected;
+    saveSettings(settings);
+  }
   renderSettings();
   if (!doc) return;
-  const s = summarize(rows, settings);
-  villas = s.villas;
+  summary = summarize(rows, settings);
+  files = null;
+  clearMarked();
+  for (const id of ["result", "result-head", "downloadBtn", "forgetReport"]) $(id).hidden = false;
   $("empty").hidden = true;
-  $("result").hidden = false;
-  $("result-head").hidden = false;
-  $("downloadBtn").hidden = false;
-  $("forgetReport").hidden = false;
-  $("tFruit").textContent = String(s.totals.fruit);
-  $("tVillas").textContent = String(s.totals.villas);
-  $("tBeds").textContent = String(s.totals.bedrooms);
-  $("tAdults").textContent = String(s.totals.adults);
-  marked = new Map([...pages].map(([p, img]) => [p, markPage(img, p, villas, lines)]));
-  const unknown = [...new Set(villas.filter((v) => !v.knownType).map((v) => v.roomType))];
+  const t = summary.totals;
+  $("tBeds").textContent = String(t.bedrooms);
+  $("tGuests").textContent = String(t.guests);
+  $("tVillas").textContent = String(t.villas);
+  const unknown = [...new Set(summary.villas.filter((v) => v.checkType).map((v) => v.roomType))];
   $("notes").innerHTML = [
     rows.length ? "" : `<p class="flag">No guest rows found. Open the Enhanced Pre Arrival Report.</p>`,
     unknown.length
-      ? `<p class="flag">New room type ${unknown.map(esc).join(", ")}: bedrooms guessed. <button type="button" class="link" data-open-settings>Set it in settings</button></p>`
+      ? `<p class="flag">New room type ${unknown.map(esc).join(", ")}: bedrooms taken from the code. <button type="button" class="link" data-open="settings">Check in settings</button></p>`
       : "",
   ].join("");
-  $("list").innerHTML = villas.map(villaItem).join("");
+  $("list").innerHTML = summary.villas.map(villaItem).join("");
   for (const d of $("list").querySelectorAll<HTMLDetailsElement>("details[open]")) fillProof(d);
-  $("standby").textContent = s.standby.length
-    ? `Not counted (standby, 0 nights): ${s.standby.map((v) => `${v.room} ${v.roomType}`).join(", ")}`
+  $("skipped").textContent = summary.skipped.length
+    ? `Not counted (0 guests): ${summary.skipped.map((v) => `${v.room} ${v.roomType}`).join(", ")}`
     : "";
-  renderPages();
+  if (!$("panel-pages").hidden) renderPages();
+  else $("fullPages").replaceChildren();
 }
 
 function showTab(name: string) {
@@ -126,24 +152,28 @@ function showTab(name: string) {
   }
   $("panel-villas").hidden = name !== "villas";
   $("panel-pages").hidden = name !== "pages";
+  if (name === "pages" && !$("fullPages").childElementCount) renderPages(); // big canvases only when asked
 }
 
 // ---- settings sheet ----
-const NUMBERS = ["fruitPerBedroom", "fruitPerAdult", "fruitPerVilla"] as const;
+
+function typeItem([code, beds]: [string, number]): string {
+  const isNew = settings.unconfirmed.includes(code);
+  const action = isNew
+    ? `<button type="button" class="ok" data-confirm="${esc(code)}" aria-label="${esc(code)} has ${beds} bedrooms: confirm">OK</button>`
+    : `<button type="button" class="icon" data-remove="${esc(code)}" aria-label="Remove ${esc(code)}">×</button>`;
+  return `<li${isNew ? ` class="new"` : ""}><label><b>${esc(code)}</b>${isNew ? `<span class="badge">New, check</span>` : ""}
+    <input type="number" inputmode="numeric" min="0" max="99" value="${beds}" data-code="${esc(code)}" aria-label="Bedrooms in ${esc(code)}"></label>${action}</li>`;
+}
 
 function renderSettings() {
-  for (const k of NUMBERS) {
-    const input = $<HTMLInputElement>(k);
-    if (document.activeElement !== input) input.value = String(settings[k]);
-  }
-  $("roomTypes").innerHTML = Object.entries(settings.roomTypes)
-    .sort(([a], [b]) => a.localeCompare(b))
-    .map(
-      ([code, beds]) => `<li><label><b>${esc(code)}</b>
-        <input type="number" inputmode="numeric" min="0" max="99" value="${beds}" data-code="${esc(code)}" aria-label="Bedrooms in ${esc(code)}"></label>
-        <button type="button" class="icon" data-remove="${esc(code)}" aria-label="Remove ${esc(code)}">×</button></li>`,
-    )
-    .join("");
+  // New types first, so they are the first thing staff see.
+  const entries = Object.entries(settings.roomTypes).sort(
+    ([a], [b]) =>
+      Number(settings.unconfirmed.includes(b)) - Number(settings.unconfirmed.includes(a)) || a.localeCompare(b),
+  );
+  $("roomTypes").innerHTML = entries.map(typeItem).join("");
+  $("version").textContent = `Version ${BUILD_ID}`;
 }
 
 function update(next: Settings) {
@@ -152,25 +182,24 @@ function update(next: Settings) {
   render();
 }
 
-for (const k of NUMBERS) {
-  $(k).addEventListener("change", (e) => update({ ...settings, [k]: Number((e.target as HTMLInputElement).value) }));
-}
 $("roomTypes").addEventListener("change", (e) => {
   const input = e.target as HTMLInputElement;
   const code = input.dataset.code;
-  if (code) update({ ...settings, roomTypes: { ...settings.roomTypes, [code]: Number(input.value) } });
+  if (code) update(confirm({ ...settings, roomTypes: { ...settings.roomTypes, [code]: Number(input.value) } }, code));
 });
 $("roomTypes").addEventListener("click", (e) => {
-  const code = (e.target as HTMLElement).dataset.remove;
-  if (!code) return;
-  const { [code]: _removed, ...rest } = settings.roomTypes;
+  const { remove, confirm: ok } = (e.target as HTMLElement).dataset;
+  if (ok) update(confirm(settings, ok));
+  if (!remove) return;
+  const { [remove]: _removed, ...rest } = settings.roomTypes;
   update({ ...settings, roomTypes: rest });
 });
 function addType() {
   const codeInput = $<HTMLInputElement>("newCode");
   const code = codeInput.value.trim().toUpperCase();
   if (!/^[A-Z][A-Z0-9]{0,9}$/.test(code)) return codeInput.focus();
-  update({ ...settings, roomTypes: { ...settings.roomTypes, [code]: Number($<HTMLInputElement>("newBeds").value) } });
+  const roomTypes = { ...settings.roomTypes, [code]: Number($<HTMLInputElement>("newBeds").value) };
+  update(confirm({ ...settings, roomTypes }, code));
   codeInput.value = "";
 }
 $("addBtn").addEventListener("click", addType);
@@ -181,10 +210,72 @@ $("addType").addEventListener("keydown", (e) => {
 });
 $("resetSettings").addEventListener("click", () => update(DEFAULTS));
 
+// ---- downloads sheet ----
+
+function exportFiles(): Record<Kind, Promise<File>> | null {
+  if (!doc || !original) return null;
+  files ??= prepare({ fileName, lines, summary }, original);
+  return files;
+}
+
+$("downloads").addEventListener("click", async (e) => {
+  const button = (e.target as HTMLElement).closest<HTMLButtonElement>("[data-download]");
+  const kind = button?.dataset.download;
+  const ready = exportFiles();
+  if (!button || !ready || (kind !== "order" && kind !== "evidence")) return;
+  button.setAttribute("aria-busy", "true");
+  try {
+    await save(await ready[kind]);
+    $<HTMLDialogElement>("downloads").close();
+  } catch (err) {
+    $("downloadError").textContent = `Could not make the PDF: ${message(err)}`;
+  } finally {
+    button.removeAttribute("aria-busy");
+  }
+});
+
+// ---- report a problem ----
+
+$("bugSend").addEventListener("click", async () => {
+  const text = $<HTMLTextAreaElement>("bugText");
+  const status = $("bugStatus");
+  if (!text.value.trim()) {
+    status.textContent = "Write what is wrong first.";
+    return text.focus();
+  }
+  const withPdf = $<HTMLInputElement>("bugPdf").checked && original;
+  const button = $<HTMLButtonElement>("bugSend");
+  button.disabled = true;
+  status.textContent = "Sending…";
+  try {
+    const id = await sendBug({
+      description: text.value.trim(),
+      result: { fileName, summary, settings, page: location.href },
+      pdf: withPdf && original ? new File([original as BlobPart], fileName, { type: "application/pdf" }) : null,
+    });
+    status.textContent = `Sent, thank you. Reference ${id}.`;
+    text.value = "";
+  } catch (err) {
+    status.textContent = `Not sent: ${message(err)}. Check the connection and try again.`;
+  } finally {
+    button.disabled = false;
+  }
+});
+
 // ---- events ----
+
 document.addEventListener("click", (e) => {
   const t = e.target as HTMLElement;
-  if (t.closest("[data-open-settings]")) $<HTMLDialogElement>("settings").showModal();
+  const open = t.closest<HTMLElement>("[data-open]")?.dataset.open;
+  if (open) {
+    for (const d of document.querySelectorAll<HTMLDialogElement>("dialog[open]")) d.close();
+    if (open === "downloads") exportFiles(); // start building now, so the tap on a file is quick
+    if (open === "report") {
+      $("bugStatus").textContent = "";
+      $("bugPdfRow").hidden = !original;
+    }
+    $<HTMLDialogElement>(open).showModal();
+  }
   const tab = t.closest<HTMLElement>("[role=tab]")?.dataset.tab;
   if (tab) showTab(tab);
   const page = t.closest<HTMLElement>(".page-link")?.dataset.page;
@@ -194,9 +285,11 @@ document.addEventListener("click", (e) => {
   }
 });
 
-$("settings").addEventListener("click", (e) => {
-  if (e.target === e.currentTarget) $<HTMLDialogElement>("settings").close(); // tap on the backdrop
-});
+for (const d of document.querySelectorAll<HTMLDialogElement>("dialog")) {
+  d.addEventListener("click", (e) => {
+    if (e.target === d) d.close(); // tap on the backdrop
+  });
+}
 
 $("list").addEventListener(
   "toggle",
@@ -210,35 +303,35 @@ $("list").addEventListener(
   true,
 );
 
+// ---- open / remember a report ----
+
 // Reads a report into the app state. pdf.js takes ownership of the buffer it gets, so it reads a copy.
 async function showReport(name: string, bytes: Uint8Array, note: string) {
   $("status").textContent = `Reading ${name}…`;
   try {
     const pdf = await openPdf(bytes.slice().buffer);
-    lines = await readLines(pdf);
-    rows = parseRows(lines.map((l) => l.text));
-    const needed = [...new Set(rows.map((r) => lines[r.line].page))];
-    pages = new Map(await Promise.all(needed.map(async (p) => [p, await renderPage(pdf, p, SCALE)] as const)));
-    doc = pdf;
-    original = bytes;
-    fileName = name;
+    const nextLines = await readLines(pdf);
+    const nextRows = parseRows(nextLines.map((l) => l.text));
+    const needed = [...new Set(nextRows.map((r) => nextLines[r.line].page))];
+    const nextPages = new Map<number, PageImage>();
+    for (const p of needed) nextPages.set(p, await renderPage(pdf, p, SCALE)); // one at a time: less peak memory
+    for (const img of pages.values()) release(img.canvas);
+    [doc, original, fileName, lines, rows, pages] = [pdf, bytes, name, nextLines, nextRows, nextPages];
     openRooms.clear();
     $("source").textContent = `${name}${rows[0] ? `, arrivals ${rows[0].arrival}` : ""}${note}`;
     $("status").textContent = "";
+    $("fullPages").replaceChildren();
     showTab("villas");
   } catch (err) {
-    $("status").textContent = `Could not read ${name}: ${err instanceof Error ? err.message : String(err)}`;
+    $("status").textContent = `Could not read ${name}: ${message(err)}`;
   }
   render();
 }
 
 function forgetReport() {
-  doc = null;
-  original = null;
-  lines = [];
-  rows = [];
-  pages = new Map();
-  marked = new Map();
+  for (const img of pages.values()) release(img.canvas);
+  clearMarked();
+  [doc, original, lines, rows, pages, files] = [null, null, [], [], new Map(), null];
   for (const id of ["result", "result-head", "downloadBtn", "forgetReport"]) $(id).hidden = true;
   $("empty").hidden = false;
   $<HTMLDialogElement>("settings").close();
@@ -262,31 +355,6 @@ document.addEventListener("change", async (e) => {
 
 $("forgetReport").addEventListener("click", forgetReport);
 
-async function download(kind: "order" | "evidence", button: HTMLButtonElement) {
-  if (!doc || !original) return;
-  button.setAttribute("aria-busy", "true");
-  try {
-    const { evidencePdf, exportName, orderPdf } = await import("./export"); // pdf-lib loads only when needed
-    const input = { fileName, lines, summary: summarize(rows, settings), settings };
-    const bytes = kind === "order" ? await orderPdf(input) : await evidencePdf(original, input);
-    const url = URL.createObjectURL(new Blob([bytes as BlobPart], { type: "application/pdf" }));
-    const a = Object.assign(document.createElement("a"), { href: url, download: exportName(kind, input.summary) });
-    a.click();
-    setTimeout(() => URL.revokeObjectURL(url), 60_000);
-    $("downloads").hidePopover();
-  } catch (err) {
-    $("status").textContent = `Could not make the ${kind} PDF: ${err instanceof Error ? err.message : String(err)}`;
-  } finally {
-    button.removeAttribute("aria-busy");
-  }
-}
-
-$("downloads").addEventListener("click", (e) => {
-  const button = (e.target as HTMLElement).closest<HTMLButtonElement>("[data-download]");
-  const kind = button?.dataset.download;
-  if (button && (kind === "order" || kind === "evidence")) download(kind, button);
-});
-
 render();
 loadReport()
   .then((saved) => {
@@ -295,4 +363,4 @@ loadReport()
     return showReport(saved.name, saved.bytes, `. Reopened from this phone, opened ${when}.`);
   })
   .catch(() => {}); // storage blocked or empty: start on the open screen
-if ("serviceWorker" in navigator) navigator.serviceWorker.register("sw.js");
+watchUpdates($("updateBar"), $<HTMLButtonElement>("updateBtn")).catch(() => {}); // no service worker: no offline/updates

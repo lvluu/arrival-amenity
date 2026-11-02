@@ -6,3 +6,5 @@ public/sw.js
 public/pdf.worker.min.mjs
 .omc/
 public/chunk-*.js
+
+bugs/

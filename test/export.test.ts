@@ -34,7 +34,7 @@ async function report(): Promise<Uint8Array> {
 
 const input = () => {
   const summary = summarize(parseRows(texts), DEFAULTS);
-  return { fileName: "Arrival Detail.pdf", lines, summary, settings: DEFAULTS };
+  return { fileName: "Arrival Detail.pdf", lines, summary };
 };
 
 test("names files by arrival day", () => {

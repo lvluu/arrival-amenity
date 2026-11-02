@@ -16,3 +16,7 @@ run = "bun run check"
 [tasks.deploy]
 description = "Build and deploy the Worker (static assets)"
 run = "bun run deploy"
+
+[tasks.bugs]
+description = "Bug reports from the app: list, or `mise run bugs -- <id>` to download one into bugs/<id>/"
+run = "bun scripts/bugs.ts"

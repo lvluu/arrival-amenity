@@ -1,8 +1,13 @@
 {
   "$schema": "node_modules/wrangler/config-schema.json",
   "name": "arrival-fruit",
+  "main": "src/worker.ts",
   "compatibility_date": "2026-10-01",
-  // Static assets only: the PDF is parsed in the browser and never reaches the Worker.
-  "assets": { "directory": "./public" },
-  "preview_urls": false
+  // The app is static and parses PDFs in the browser. The Worker only runs for /api/* (bug reports).
+  "assets": { "directory": "./public", "binding": "ASSETS", "run_worker_first": ["/api/*"] },
+  // Bug reports: description + result + report PDF, kept 90 days. Read them with `mise run bugs`.
+  "kv_namespaces": [{ "binding": "BUGS", "id": "a1b9db9ced7e4cae9f8d89468365b03e" }],
+  "ratelimits": [{ "name": "BUG_LIMIT", "namespace_id": "1001", "simple": { "limit": 5, "period": 60 } }],
+  "preview_urls": false,
+  "observability": { "enabled": true }
 }

@@ -1,21 +1,24 @@
 # Arrival Fruit
 
-PWA that reads the Opera "Enhanced Pre Arrival Report" PDF and lists the fruit to order per villa:
-villa -> room type -> bedrooms -> fruit.
+PWA that reads the Opera "Enhanced Pre Arrival Report" PDF and lists, per arriving villa, the **bedrooms** and the
+**guests** (adults + children) for the fruit order.
 
-- **Settings** (saved per device): fruit per bedroom, per adult and per villa, plus the room type -> bedrooms table.
-  Defaults are assumptions (1 fruit per bedroom; RL3/RP3 = 3, RD2 = 2, others = 1). A code missing from the
-  table is guessed from its digit (RP4 = 4, else 1) and flagged "new type".
-- Sharer rows are merged per villa. Standby villas (0 nights) are skipped and listed.
-- **Phone-first, one screen**: sticky total, one compact row per villa, settings in a bottom sheet.
-- **Evidence**: tap a villa to see its PDF rows cut out with red boxes and the fruit math; the "PDF pages" tab shows full pages.
-- **Downloads** (top bar): `fruit-order_YYYY-MM-DD.pdf`, a printable A4 order with a tick box per villa, and
-  `fruit-evidence_YYYY-MM-DD.pdf`, the same order pages followed by the report with red boxes. Named by arrival day.
-  pdf-lib is loaded only when someone downloads.
-- **Memory**: settings live in localStorage; the last report lives in IndexedDB (binary, can pass localStorage's
-  size limit) and reopens at start. Settings > "Forget this report" removes it.
-- The PDF never leaves the device (pdf.js in the browser). The Worker serves static files only.
-  Report PDFs hold guest data: `*.pdf` is git-ignored and listed in `public/.assetsignore` so it is never deployed.
+- **Counting**: every row of the same villa number is added up (1010: 0 + 3 + 0 = 3 guests). Rows with 0 guests are
+  sharers. A villa whose rows all have 0 guests (sharer-only, standby) is not counted and is listed under the list.
+- **Bedrooms** come from the room type table in Settings. A room type the table does not have is added automatically
+  with the last number in its code (RP4 = 4, VM1B = 1, none = 1) and marked "New, check" until someone taps OK or
+  changes it. Saved per phone (localStorage); bug reports carry the table, so the full list builds up over time.
+- **Evidence**: tap a villa to see its PDF rows cut out with red boxes (row, room type, adults + children) and the
+  math; the "PDF pages" tab shows full pages.
+- **Downloads**: `fruit-order_YYYY-MM-DD.pdf` (printable A4 list with a tick box per villa) and
+  `fruit-evidence_YYYY-MM-DD.pdf` (the list, then the boxed report). On iPhone they open the share sheet.
+- **Memory**: the last report is kept in IndexedDB and reopens at start; Settings > "Forget this report" removes it.
+- **Updates**: every build stamps a new `BUILD_ID` into `sw.js`, so phones notice a deploy and show "A new version is
+  ready. Update".
+- **Report a problem**: sends the description, what the app showed and (if ticked) the PDF to `POST /api/bug`. The
+  Worker stores them in KV for 90 days; read them with `mise run bugs` and `mise run bugs -- <id>`.
+- The PDF is parsed on the phone (pdf.js legacy build, for older iPhones). Only a bug report uploads anything.
+  Report PDFs are git-ignored and listed in `public/.assetsignore` so they are never deployed.
 
 ## Run
 
@@ -26,8 +29,9 @@ mise run dev      # build, then wrangler dev on http://localhost:8787
 mise run deploy   # build, then wrangler deploy
 ```
 
-`src/` is TypeScript, bundled by `bun build` into `public/app.js` and `public/sw.js`. Those build outputs
-are git-ignored. The service worker is network-first, so a new deploy reaches online users on the next load.
+`src/` is TypeScript, bundled by `scripts/build.ts` into `public/` (build outputs are git-ignored); `src/worker.ts`
+is the Worker (bundled by wrangler). iPhone check in WebKit: `bun scripts/iphone-smoke.ts <report.pdf> [url]`
+(needs `bunx playwright-core install webkit` once).
 
 ## Deploy
 

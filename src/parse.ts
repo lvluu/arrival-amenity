@@ -1,6 +1,6 @@
-import type { Settings } from "./settings";
+import { guessBedrooms, type Settings } from "./settings";
 
-// Parses the Opera "Enhanced Pre Arrival Report" text lines into villas.
+// Parses the Opera "Enhanced Pre Arrival Report" text lines into villas with bedrooms and guests.
 // A guest row: room, name [C/T/S], arrival, departure, nights, room type, adults, children, rooms, ...
 const ROW =
   /^(\d{3,5})\s+(.+?)\s+(\d\d\/\d\d\/\d\d)\s+(\d\d\/\d\d\/\d\d)\s+(\d+)\s+([A-Z][A-Z0-9]*)\s+(\d+)\s+(\d+)\s+(\d+)\b/;
@@ -15,29 +15,34 @@ export interface Row {
   roomType: string;
   adults: number;
   children: number;
-  rooms: number;
 }
 
-export interface Villa extends Omit<Row, "line" | "name"> {
+export interface Villa {
+  room: string;
+  roomType: string;
+  arrival: string;
+  nights: number;
   lines: number[];
   names: string[];
+  rowGuests: number[]; // adults + children per report row, in report order
+  adults: number;
+  children: number;
+  guests: number;
   bedrooms: number;
-  knownType: boolean;
-  fruit: number;
-  sharerOnly: boolean;
+  checkType: boolean; // room type was added automatically and nobody has checked its bedrooms yet
 }
 
 export interface Summary {
-  villas: Villa[];
-  standby: Villa[];
-  totals: { villas: number; bedrooms: number; adults: number; fruit: number };
+  villas: Villa[]; // guests > 0: counted
+  skipped: Villa[]; // guests = 0 on every row (sharer-only or standby): not counted
+  totals: { villas: number; bedrooms: number; guests: number; adults: number; children: number };
 }
 
 export function parseRows(lines: string[]): Row[] {
   return lines.flatMap((line, index) => {
     const m = line.trim().match(ROW);
     if (!m) return [];
-    const [, room, nameCts, arrival, departure, nights, roomType, adults, children, rooms] = m;
+    const [, room, nameCts, arrival, departure, nights, roomType, adults, children] = m;
     return [
       {
         line: index,
@@ -52,48 +57,46 @@ export function parseRows(lines: string[]): Row[] {
         roomType,
         adults: Number(adults),
         children: Number(children),
-        rooms: Number(rooms),
       },
     ];
   });
 }
 
-// Bedrooms from the settings table; unknown codes fall back to the digit in the code (RL3 -> 3), else 1.
-export function bedrooms(roomType: string, roomTypes: Record<string, number>): { beds: number; known: boolean } {
-  if (roomType in roomTypes) return { beds: roomTypes[roomType], known: true };
-  const d = roomType.match(/\d/);
-  return { beds: d ? Number(d[0]) : 1, known: false };
-}
-
-// One entry per villa; sharer rows merged. Standby villas (0 nights) kept apart.
+// One villa per room number: every row of that room is summed. Rows with 0 guests are sharers and add nothing;
+// a villa whose rows all have 0 guests is not counted.
 export function summarize(rows: Row[], settings: Settings): Summary {
-  const byRoom = new Map<string, Omit<Villa, "bedrooms" | "knownType" | "fruit" | "sharerOnly">>();
-  for (const { line, name, ...r } of rows) {
-    const v = byRoom.get(r.room) ?? { ...r, lines: [], names: [], adults: 0, children: 0, rooms: 0 };
-    byRoom.set(r.room, {
-      ...v,
-      lines: [...v.lines, line],
-      names: [...v.names, name],
-      adults: v.adults + r.adults,
-      children: v.children + r.children,
-      rooms: v.rooms + r.rooms,
-    });
-  }
-  const all: Villa[] = [...byRoom.values()].map((v) => {
-    const { beds, known } = bedrooms(v.roomType, settings.roomTypes);
-    const fruit = beds * settings.fruitPerBedroom + v.adults * settings.fruitPerAdult + settings.fruitPerVilla;
-    return { ...v, bedrooms: beds, knownType: known, fruit, sharerOnly: v.rooms === 0 };
+  const byRoom = new Map<string, Row[]>();
+  for (const r of rows) byRoom.set(r.room, [...(byRoom.get(r.room) ?? []), r]);
+  const all: Villa[] = [...byRoom.values()].map((rs) => {
+    const main = rs.find((r) => r.adults + r.children > 0) ?? rs[0];
+    const adults = rs.reduce((s, r) => s + r.adults, 0);
+    const children = rs.reduce((s, r) => s + r.children, 0);
+    return {
+      room: main.room,
+      roomType: main.roomType,
+      arrival: main.arrival,
+      nights: main.nights,
+      lines: rs.map((r) => r.line),
+      names: rs.map((r) => r.name),
+      rowGuests: rs.map((r) => r.adults + r.children),
+      adults,
+      children,
+      guests: adults + children,
+      bedrooms: settings.roomTypes[main.roomType] ?? guessBedrooms(main.roomType),
+      checkType: !(main.roomType in settings.roomTypes) || settings.unconfirmed.includes(main.roomType),
+    };
   });
-  const villas = all.filter((v) => v.nights > 0);
+  const villas = all.filter((v) => v.guests > 0);
   const sum = (f: (v: Villa) => number) => villas.reduce((s, v) => s + f(v), 0);
   return {
     villas,
-    standby: all.filter((v) => v.nights === 0),
+    skipped: all.filter((v) => v.guests === 0),
     totals: {
       villas: villas.length,
       bedrooms: sum((v) => v.bedrooms),
+      guests: sum((v) => v.guests),
       adults: sum((v) => v.adults),
-      fruit: sum((v) => v.fruit),
+      children: sum((v) => v.children),
     },
   };
 }

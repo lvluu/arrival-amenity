@@ -1,4 +1,9 @@
-import { GlobalWorkerOptions, getDocument, type PageViewport, type PDFDocumentProxy } from "pdfjs-dist";
+import {
+  GlobalWorkerOptions,
+  getDocument,
+  type PageViewport,
+  type PDFDocumentProxy,
+} from "pdfjs-dist/legacy/build/pdf.mjs";
 import type { TextItem } from "pdfjs-dist/types/src/display/api";
 
 GlobalWorkerOptions.workerSrc = "pdf.worker.min.mjs";

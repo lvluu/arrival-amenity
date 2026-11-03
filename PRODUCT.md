@@ -6,13 +6,13 @@ product
 
 ## Users
 
-Resort staff (front office / F&B / housekeeping) who prepare the daily fruit order for arriving villas. They use a phone,
+Resort staff (front office / F&B / housekeeping) who count bedrooms and guests for arriving villas to prepare them (fruit, amenities). They use a phone,
 often standing, in daylight, between other tasks. Today they read the Opera "Enhanced Pre Arrival Report" PDF by hand:
-villa -> room type -> bedrooms -> fruit.
+villa -> room type -> bedrooms, plus adults + children.
 
 ## Product Purpose
 
-Turn the arrival PDF into the fruit order in seconds, and show proof for every number so staff trust it without
+Turn the arrival PDF into bedrooms and guests per villa in seconds, and show proof for every number so staff trust it without
 re-reading the report. Success: one glance gives the total and the per-villa list; one tap shows where in the PDF a number came from.
 
 ## Brand Personality

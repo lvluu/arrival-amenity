@@ -1,7 +1,7 @@
 import { sendBug } from "./bug-report";
 import { type Kind, prepare, save } from "./downloads";
 import { cropRow, mainLine, markPage, release } from "./evidence";
-import { parseRows, type Row, type Summary, summarize, type Villa } from "./parse";
+import { arrivalDates, parseRows, type Row, reportDate, type Summary, summarize, type Villa } from "./parse";
 import { type Line, openPdf, type PageImage, type PDFDocumentProxy, readLines, renderPage } from "./pdf";
 import { confirm, DEFAULTS, loadSettings, type Settings, sanitize, saveSettings, withDetected } from "./settings";
 import { clearReport, loadReport, saveReport } from "./store";
@@ -21,6 +21,7 @@ let lines: Line[] = [];
 let rows: Row[] = [];
 let pages = new Map<number, PageImage>(); // clean renders, one per page with guest rows
 const marked = new Map<number, HTMLCanvasElement>(); // red-boxed copies, made when first needed
+let day = ""; // arrival date shown: a report can cover several days, each is its own order
 let summary: Summary = summarize([], DEFAULTS);
 let settings = loadSettings();
 let files: Record<Kind, Promise<File>> | null = null; // download PDFs for the current result
@@ -37,6 +38,18 @@ function markedPage(p: number): HTMLCanvasElement | null {
   const hit = marked.get(p) ?? markPage(src, p, summary.villas, lines);
   marked.set(p, hit);
   return hit;
+}
+
+// ---- arrival dates ----
+
+const dayName = (d: string) =>
+  reportDate(d)?.toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short" }) ?? d;
+
+function renderDates(days: string[]) {
+  $("dates").hidden = days.length < 2;
+  $("dates").innerHTML = days
+    .map((d) => `<button type="button" data-day="${esc(d)}" aria-pressed="${d === day}">${esc(dayName(d))}</button>`)
+    .join("");
 }
 
 // ---- villas ----
@@ -95,7 +108,9 @@ function fillProof(d: HTMLDetailsElement) {
 }
 
 function renderPages() {
-  const figs = [...pages.keys()].map((p) => {
+  const all = [...summary.villas, ...summary.skipped].flatMap((v) => v.lines.map((l) => lines[l].page));
+  const shown = [...pages.keys()].filter((p) => all.includes(p)); // pages of the chosen day
+  const figs = shown.map((p) => {
     const fig = document.createElement("figure");
     fig.id = `page-${p}`;
     fig.innerHTML = `<figcaption>Page ${p} of ${doc?.numPages}</figcaption>`;
@@ -121,7 +136,13 @@ function render() {
   }
   renderSettings();
   if (!doc) return;
-  summary = summarize(rows, settings);
+  const days = arrivalDates(rows);
+  if (!days.includes(day)) day = days[0] ?? "";
+  renderDates(days);
+  summary = summarize(
+    rows.filter((r) => r.arrival === day),
+    settings,
+  );
   files = null;
   clearMarked();
   for (const id of ["result", "result-head", "downloadBtn", "forgetReport"]) $(id).hidden = false;
@@ -276,6 +297,12 @@ document.addEventListener("click", (e) => {
     }
     $<HTMLDialogElement>(open).showModal();
   }
+  const pick = t.closest<HTMLElement>("[data-day]")?.dataset.day;
+  if (pick && pick !== day) {
+    day = pick;
+    openRooms.clear();
+    render();
+  }
   const tab = t.closest<HTMLElement>("[role=tab]")?.dataset.tab;
   if (tab) showTab(tab);
   const page = t.closest<HTMLElement>(".page-link")?.dataset.page;
@@ -318,7 +345,9 @@ async function showReport(name: string, bytes: Uint8Array, note: string) {
     for (const img of pages.values()) release(img.canvas);
     [doc, original, fileName, lines, rows, pages] = [pdf, bytes, name, nextLines, nextRows, nextPages];
     openRooms.clear();
-    $("source").textContent = `${name}${rows[0] ? `, arrivals ${rows[0].arrival}` : ""}${note}`;
+    const days = arrivalDates(rows);
+    day = days[0] ?? "";
+    $("source").textContent = `${name}${days.length ? `, arrivals ${days.join(", ")}` : ""}${note}`;
     $("status").textContent = "";
     $("fullPages").replaceChildren();
     showTab("villas");

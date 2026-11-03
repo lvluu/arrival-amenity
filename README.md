@@ -3,6 +3,8 @@
 PWA that reads the Opera "Enhanced Pre Arrival Report" PDF and lists, per arriving villa, the **bedrooms** and the
 **guests** (adults + children) for the fruit order.
 
+- **Several days**: a report with more than one "Arrival Date" section shows one button per day; each day has its
+  own villa list, totals and downloads. A villa is counted per day (same villa on two days = two orders).
 - **Counting**: every row of the same villa number is added up (1010: 0 + 3 + 0 = 3 guests). Rows with 0 guests are
   sharers. A villa whose rows all have 0 guests (sharer-only, standby) is not counted and is listed under the list.
 - **Bedrooms** come from the room type table in Settings. A room type the table does not have is added automatically

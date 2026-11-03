@@ -40,8 +40,8 @@ const input = () => {
 test("names files by arrival day", () => {
   expect(reportDate("25/10/26")?.getMonth()).toBe(9);
   expect(reportDate("nope")).toBeNull();
-  expect(exportName("order", input().summary)).toBe("fruit-order_2026-10-25.pdf");
-  expect(exportName("evidence", input().summary)).toBe("fruit-evidence_2026-10-25.pdf");
+  expect(exportName("order", input().summary)).toBe("beds-guests_2026-10-25.pdf");
+  expect(exportName("evidence", input().summary)).toBe("beds-guests-evidence_2026-10-25.pdf");
 });
 
 test("latin keeps names readable for standard fonts", () => {
@@ -52,7 +52,7 @@ test("order PDF is one A4 page with the order", async () => {
   const doc = await PDFDocument.load(await orderPdf(input()));
   expect(doc.getPageCount()).toBe(1);
   expect(doc.getPage(0).getSize().width).toBeCloseTo(595.28);
-  expect(doc.getTitle()).toBe("Fruit order 2026-10-25");
+  expect(doc.getTitle()).toBe("Beds & guests 2026-10-25");
 });
 
 test("evidence PDF is order page + every report page", async () => {

@@ -69,7 +69,7 @@ export function reportDate(s: string | undefined): Date | null {
 }
 
 // Arrival dates in report order. A report can cover several days ("Arrival Date" sections); each day is its own
-// fruit order.
+// list of beds and guests.
 export function arrivalDates(rows: Row[]): string[] {
   return [...new Set(rows.map((r) => r.arrival))];
 }

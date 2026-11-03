@@ -1,10 +1,13 @@
-# Arrival Fruit
+# Beds & Guests
 
 PWA that reads the Opera "Enhanced Pre Arrival Report" PDF and lists, per arriving villa, the **bedrooms** and the
-**guests** (adults + children) for the fruit order.
+**guests** (adults + children). Staff use it to prepare each villa (fruit, amenities) before arrival.
+
+Formerly "Arrival Fruit": the Worker, URL and on-phone storage keys keep the old `arrival-fruit` name so installed
+phones keep their settings.
 
 - **Several days**: a report with more than one "Arrival Date" section shows one button per day; each day has its
-  own villa list, totals and downloads. A villa is counted per day (same villa on two days = two orders).
+  own villa list, totals and downloads. A villa is counted per day (same villa on two days = two lists).
 - **Counting**: every row of the same villa number is added up (1010: 0 + 3 + 0 = 3 guests). Rows with 0 guests are
   sharers. A villa whose rows all have 0 guests (sharer-only, standby) is not counted and is listed under the list.
 - **Bedrooms** come from the room type table in Settings. A room type the table does not have is added automatically
@@ -12,8 +15,8 @@ PWA that reads the Opera "Enhanced Pre Arrival Report" PDF and lists, per arrivi
   changes it. Saved per phone (localStorage); bug reports carry the table, so the full list builds up over time.
 - **Evidence**: tap a villa to see its PDF rows cut out with red boxes (row, room type, adults + children) and the
   math; the "PDF pages" tab shows full pages.
-- **Downloads**: `fruit-order_YYYY-MM-DD.pdf` (printable A4 list with a tick box per villa) and
-  `fruit-evidence_YYYY-MM-DD.pdf` (the list, then the boxed report). On iPhone they open the share sheet.
+- **Downloads**: `beds-guests_YYYY-MM-DD.pdf` (printable A4 list with a tick box per villa) and
+  `beds-guests-evidence_YYYY-MM-DD.pdf` (the list, then the boxed report). On iPhone they open the share sheet.
 - **Memory**: the last report is kept in IndexedDB and reopens at start; Settings > "Forget this report" removes it.
 - **Updates**: every build stamps a new `BUILD_ID` into `sw.js`, so phones notice a deploy and show "A new version is
   ready. Update".

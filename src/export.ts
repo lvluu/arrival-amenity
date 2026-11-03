@@ -1,5 +1,5 @@
 // Downloads, built on the device with pdf-lib:
-// - order PDF: printable A4 list for the fruit order (date, totals, one row per villa with bedrooms and guests).
+// - order PDF: printable A4 list of bedrooms and guests (date, totals, one row per villa with bedrooms and guests).
 // - evidence PDF: the same list, then the original report with every counted row boxed red and labelled.
 //   Boxes are drawn as vectors on the original, so the report text stays selectable.
 import { PDFDocument, type PDFFont, type PDFPage, rgb, StandardFonts } from "pdf-lib";
@@ -39,9 +39,9 @@ const iso = (d: Date) =>
 
 const arrival = (s: Summary) => reportDate(s.villas[0]?.arrival ?? s.skipped[0]?.arrival);
 
-// fruit-order_2026-10-25.pdf / fruit-evidence_2026-10-25.pdf: sorts by arrival day; falls back to today.
+// beds-guests_2026-10-25.pdf / beds-guests-evidence_2026-10-25.pdf: sorts by arrival day; falls back to today.
 export function exportName(kind: "order" | "evidence", s: Summary): string {
-  return `fruit-${kind}_${iso(arrival(s) ?? new Date())}.pdf`;
+  return `beds-guests${kind === "evidence" ? "-evidence" : ""}_${iso(arrival(s) ?? new Date())}.pdf`;
 }
 
 const plural = (n: number, one: string, many = `${one}s`) => `${n} ${n === 1 ? one : many}`;
@@ -87,7 +87,7 @@ function header(page: PDFPage, f: Fonts, input: ExportInput): number {
   const date = arrival(summary);
   const t = summary.totals;
   let y = A4[1] - M - 10;
-  text(page, "Fruit order", M, y, 24, f.bold);
+  text(page, "Beds & guests", M, y, 24, f.bold);
   right(page, `${t.bedrooms}`, A4[0] - M - 90, A4[1] - M - 14, 30, f.bold, ACCENT);
   right(page, `${t.guests}`, A4[0] - M, A4[1] - M - 14, 30, f.bold, ACCENT);
   y -= 22;
@@ -141,7 +141,7 @@ function villaRow(page: PDFPage, f: Fonts, v: Villa, lines: Line[], y: number, z
 
 function footer(pages: PDFPage[], f: Fonts) {
   pages.forEach((p, i) => {
-    text(p, "Arrival Fruit", M, 28, 8, f.regular, MUTED);
+    text(p, "Beds & Guests", M, 28, 8, f.regular, MUTED);
     right(p, `Page ${i + 1} of ${pages.length}`, A4[0] - M, 28, 8, f.regular, MUTED);
   });
 }
@@ -180,7 +180,7 @@ async function addOrderPages(doc: PDFDocument, input: ExportInput): Promise<void
 export async function orderPdf(input: ExportInput): Promise<Uint8Array> {
   const doc = await PDFDocument.create();
   await addOrderPages(doc, input);
-  doc.setTitle(`Fruit order ${iso(arrival(input.summary) ?? new Date())}`);
+  doc.setTitle(`Beds & guests ${iso(arrival(input.summary) ?? new Date())}`);
   return doc.save();
 }
 
@@ -228,6 +228,6 @@ export async function evidencePdf(original: Uint8Array, input: ExportInput): Pro
   const doc = await PDFDocument.load(original);
   markReport(doc.getPages(), await doc.embedFont(StandardFonts.HelveticaBold), input);
   await addOrderPages(doc, input);
-  doc.setTitle(`Fruit order evidence ${iso(arrival(input.summary) ?? new Date())}`);
+  doc.setTitle(`Beds & guests evidence ${iso(arrival(input.summary) ?? new Date())}`);
   return doc.save();
 }

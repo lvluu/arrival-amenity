@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { parseRows, summarize } from "../src/parse";
+import { arrivalDates, parseRows, summarize } from "../src/parse";
 import { confirm, DEFAULTS, guessBedrooms, sanitize, withDetected } from "../src/settings";
 
 // Made-up guests, real row layout.
@@ -76,4 +76,28 @@ test("sanitize drops bad stored settings and old fruit keys", () => {
     roomTypes: { RL3: 3 },
     unconfirmed: ["RL3"],
   });
+});
+
+test("multi-day report: one list per arrival date, same villa on two dates stays apart", () => {
+  const two = [
+    "Arrival Date 05/11/26",
+    "1030 *Doe,Jane,Mrs. 05/11/26 07/11/26 2 RD1 2 0 1 PPM ASP CCG AXH20D USD 1,336",
+    "5010 *Roe,Ann,Mrs. 05/11/26 08/11/26 3 VM1B 2 0 1 PKM WEB CCG FSH20D USD 897",
+    "Arrival Date 06/11/26",
+    "1090 *Poe,Ed,Mr. 06/11/26 10/11/26 4 RD2 3 0 1 POB BKG CCG BKGBNB USD 1,930",
+    "1030 *Lee,Mia,Ms. 07/11/26 09/11/26 2 RD1 1 1 1 PPM ASP CCG AXH20D USD 1,336",
+  ];
+  const rows = parseRows(two);
+  expect(arrivalDates(rows)).toEqual(["05/11/26", "06/11/26", "07/11/26"]);
+  expect(summarize(rows, DEFAULTS).villas.map((v) => [v.arrival, v.room, v.guests])).toEqual([
+    ["05/11/26", "1030", 2],
+    ["05/11/26", "5010", 2],
+    ["06/11/26", "1090", 3],
+    ["07/11/26", "1030", 2],
+  ]);
+  const day = summarize(
+    rows.filter((r) => r.arrival === "06/11/26"),
+    DEFAULTS,
+  );
+  expect(day.totals).toEqual({ villas: 1, bedrooms: 2, guests: 3, adults: 3, children: 0 });
 });

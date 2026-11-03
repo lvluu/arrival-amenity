@@ -62,11 +62,26 @@ export function parseRows(lines: string[]): Row[] {
   });
 }
 
-// One villa per room number: every row of that room is summed. Rows with 0 guests are sharers and add nothing;
+// "25/10/26" (report format, dd/mm/yy) -> Date, or null.
+export function reportDate(s: string | undefined): Date | null {
+  const m = s?.match(/^(\d\d)\/(\d\d)\/(\d\d)$/);
+  return m ? new Date(2000 + Number(m[3]), Number(m[2]) - 1, Number(m[1])) : null;
+}
+
+// Arrival dates in report order. A report can cover several days ("Arrival Date" sections); each day is its own
+// fruit order.
+export function arrivalDates(rows: Row[]): string[] {
+  return [...new Set(rows.map((r) => r.arrival))];
+}
+
+// One villa per arrival date and room number: every row of that room on that day is summed. Rows with 0 guests are sharers and add nothing;
 // a villa whose rows all have 0 guests is not counted.
 export function summarize(rows: Row[], settings: Settings): Summary {
-  const byRoom = new Map<string, Row[]>();
-  for (const r of rows) byRoom.set(r.room, [...(byRoom.get(r.room) ?? []), r]);
+  const byRoom = new Map<string, Row[]>(); // keyed by date too: a villa can leave and get new guests the same report
+  for (const r of rows) {
+    const key = `${r.arrival} ${r.room}`;
+    byRoom.set(key, [...(byRoom.get(key) ?? []), r]);
+  }
   const all: Villa[] = [...byRoom.values()].map((rs) => {
     const main = rs.find((r) => r.adults + r.children > 0) ?? rs[0];
     const adults = rs.reduce((s, r) => s + r.adults, 0);

@@ -3,7 +3,7 @@
 // - evidence PDF: the same list, then the original report with every counted row boxed red and labelled.
 //   Boxes are drawn as vectors on the original, so the report text stays selectable.
 import { PDFDocument, type PDFFont, type PDFPage, rgb, StandardFonts } from "pdf-lib";
-import type { Summary, Villa } from "./parse";
+import { reportDate, type Summary, type Villa } from "./parse";
 import { fields } from "./fields";
 import type { Line, TextItem } from "./pdf";
 
@@ -33,12 +33,6 @@ export const latin = (s: string) =>
     .normalize("NFD")
     .replace(/[̀-ͯ]/g, "")
     .replace(/[^\x20-\x7e]/g, "?");
-
-// "25/10/26" (report format, dd/mm/yy) -> Date, or null.
-export function reportDate(s: string | undefined): Date | null {
-  const m = s?.match(/^(\d\d)\/(\d\d)\/(\d\d)$/);
-  return m ? new Date(2000 + Number(m[3]), Number(m[2]) - 1, Number(m[1])) : null;
-}
 
 const iso = (d: Date) =>
   `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;

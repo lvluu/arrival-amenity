@@ -5,7 +5,7 @@ import { $ } from "bun";
 const sha = (await $`git rev-parse --short HEAD`.quiet().nothrow().text()).trim() || "dev";
 const id = `${sha}-${Date.now().toString(36)}`;
 
-await $`rm -f public/chunk-*.js`;
+await $`rm -f public/chunk-*.js`.quiet().nothrow(); // no chunks yet on a clean checkout: nothing to remove
 const result = await Bun.build({
   entrypoints: ["src/app.ts", "src/sw.ts"],
   outdir: "public",

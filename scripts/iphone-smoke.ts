@@ -28,7 +28,22 @@ try {
   await page.locator("#downloadBtn").click();
   const [download] = await Promise.all([page.waitForEvent("download"), page.locator("[data-download=order]").click()]);
   await page.screenshot({ path: "bugs/iphone-smoke.png" });
-  console.log(JSON.stringify({ totals, why, download: download.suggestedFilename(), errors }, null, 2));
+  // Multi-day report: every other arrival date has its own totals and order file.
+  const days = [];
+  for (const button of (await page.locator("#dates button").all()).slice(1)) {
+    await page.keyboard.press("Escape");
+    await button.click();
+    await page.locator("#downloadBtn").click();
+    const [file] = await Promise.all([page.waitForEvent("download"), page.locator("[data-download=order]").click()]);
+    days.push({
+      day: await button.textContent(),
+      villas: await page.locator("#tVillas").textContent(),
+      bedrooms: await page.locator("#tBeds").textContent(),
+      guests: await page.locator("#tGuests").textContent(),
+      download: file.suggestedFilename(),
+    });
+  }
+  console.log(JSON.stringify({ totals, why, download: download.suggestedFilename(), days, errors }, null, 2));
   if (errors.length) process.exit(1);
 } finally {
   await browser.close();

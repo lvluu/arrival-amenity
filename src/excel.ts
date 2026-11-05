@@ -18,7 +18,7 @@ export const COLUMNS: [col: string, header: string, rule: string][] = [
   ["J", "REMARK", '"own transfer" or "TA transfer" from the transfer column, else empty'],
   ["K", "STATUS", "Empty, staff fill"],
   ["L", "Code", "AM numbers from Specials and Traces (AM22, AM5 = 22 and 5); 10 when the PDF has none"],
-  ["M", "AMENITY DETAIL", '"standard"; staff change it when the boss asks for more'],
+  ["M", "AMENITY DETAIL", '"Standard"; staff change it when the boss asks for more'],
 ];
 export const OTHER_RULES = [
   "Villas in report order from row 3; more rows are added when a day has more villas.",
@@ -39,7 +39,7 @@ export interface ArrivalRow {
   codes: string[];
 }
 
-const AMENITY = "standard"; // default amenity detail
+const AMENITY = "Standard"; // default amenity detail
 const FIRST = 3; // first villa row in the Arrival sheet
 const SLOTS = 17; // template rows 3..19 before the in-house block
 

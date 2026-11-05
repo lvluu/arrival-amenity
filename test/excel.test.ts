@@ -74,7 +74,7 @@ test("fills the Arrival sheet of the template", async () => {
   expect([at("G4"), at("J4"), at("L4"), at("F5")]).toEqual(["no time", "own transfer", 10, 1]);
   expect([at("B7"), at("J7")]).toEqual(["6070\n2", "TA transfer"]);
   expect(["G3", "H3", "I3"].map((c) => ws?.getCell(c).numFmt)).toEqual(["h:mm", "dd/mm/yyyy", "dd/mm/yyyy"]);
-  expect([at("M3"), at("M7")]).toEqual(["standard", "standard"]);
+  expect([at("M3"), at("M7")]).toEqual(["Standard", "Standard"]);
   expect(at("B25")).toBe("ROOM"); // in-house header stays where staff expect it
 });
 

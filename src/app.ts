@@ -269,7 +269,7 @@ function renderSettings() {
     ...COLUMNS.map(([col, header, rule]) => `<li><b>${col}</b> ${esc(header)}<span>${esc(rule)}</span></li>`),
     ...OTHER_RULES.map((rule) => `<li class="other">${esc(rule)}</li>`),
   ].join("");
-  $("version").textContent = `Version ${BUILD_ID}`;
+  $("version").textContent = `Version ${APP_VERSION} (${BUILD_ID})`;
 }
 
 function showSettingsTab(name: string) {
@@ -478,4 +478,5 @@ loadReport()
     return showReport(saved.name, saved.bytes, `. Reopened from this phone, opened ${when}.`);
   })
   .catch(() => {}); // storage blocked or empty: start on the open screen
+$("homeVersion").textContent = `Version ${APP_VERSION}`;
 watchUpdates($("updateBar"), $<HTMLButtonElement>("updateBtn")).catch(() => {}); // no service worker: no offline/updates

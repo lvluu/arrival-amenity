@@ -18,7 +18,7 @@ phones keep their settings.
 - **Home**: two tiles, "Count beds" and "Excel"; pick one, choose the PDF, and the app opens on that feature.
 - **Tabs**: "Count beds" (the villa list above), "PDF pages" and "Excel".
 - **Excel**: fills the Arrival sheet of the daily amenity workbook (`public/template.xlsx`, the staff's own sheet with
-  every guest cleared) from the report, one file per arrival date named like staff do (`5th.xlsx`); "All days" makes
+  every guest cleared) from the report, one file per arrival date named by the date (`06-11-2026.xlsx`); "All days" makes
   them all. Only what the PDF says is filled (room, bedrooms if more than 1, name, adults, children, ETA, dates,
   transfer, AM codes); status, amenity detail and the food and drink sheets stay for staff. The column rules live in
   `COLUMNS` in `src/excel.ts` and are listed in Settings > "Excel columns". A day with more than 17 villas adds rows.
@@ -47,5 +47,13 @@ is the Worker (bundled by wrangler). iPhone check in WebKit: `bun scripts/iphone
 
 ## Deploy
 
-Manual: `mise run deploy` (build, then `wrangler deploy`). CI (`.github/workflows/ci.yml`) runs check + build on every
+Manual: `mise run deploy` (fetch tags, build, then `wrangler deploy`). CI (`.github/workflows/ci.yml`) runs check + build on every
 push and pull request; it does not deploy.
+
+## Versions
+
+`MAJOR.MINOR.PATCH` from git tags (`scripts/version.ts`), shown on the home screen and in Settings > This phone.
+
+- Patch: automatic. Every push to main gets a GitHub release `vX.Y.<commits since vX.Y.0>` with generated notes.
+- Minor or major: tag the commit by hand, e.g. `git tag v1.1.0 && git push origin v1.1.0`; patches count from there.
+- `1.0.0` = 2026-11-05: Count beds, Excel tab, Microsoft Excel fixes.

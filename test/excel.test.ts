@@ -43,16 +43,8 @@ test("sheet date shows the full year", () => {
   expect(longDate("05/11/26")).toBe("05/11/2026");
 });
 
-test("file name is the day of month with its ordinal", () => {
-  expect(["01/11/26", "02/11/26", "03/11/26", "05/11/26", "11/11/26", "12/11/26", "22/11/26"].map(xlsxName)).toEqual([
-    "1st.xlsx",
-    "2nd.xlsx",
-    "3rd.xlsx",
-    "5th.xlsx",
-    "11th.xlsx",
-    "12th.xlsx",
-    "22nd.xlsx",
-  ]);
+test("file name is the arrival date", () => {
+  expect(["06/11/26", "22/12/26"].map(xlsxName)).toEqual(["06-11-2026.xlsx", "22-12-2026.xlsx"]);
 });
 
 const template = () => Bun.file("public/template.xlsx").arrayBuffer();
@@ -82,6 +74,7 @@ test("fills the Arrival sheet of the template", async () => {
   expect([at("G4"), at("J4"), at("L4"), at("F5")]).toEqual(["no time", "own transfer", 10, 1]);
   expect([at("B7"), at("J7")]).toEqual(["6070\n2", "TA transfer"]);
   expect(["G3", "H3", "I3"].map((c) => ws?.getCell(c).numFmt)).toEqual(["h:mm", "dd/mm/yyyy", "dd/mm/yyyy"]);
+  expect([at("M3"), at("M7")]).toEqual(["standard", "standard"]);
   expect(at("B25")).toBe("ROOM"); // in-house header stays where staff expect it
 });
 

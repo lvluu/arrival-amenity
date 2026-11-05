@@ -14,8 +14,8 @@ description = "Gate for every change: typecheck + lint + format check + tests"
 run = "bun run check"
 
 [tasks.deploy]
-description = "Build and deploy the Worker (static assets)"
-run = "bun run deploy"
+description = "Build and deploy the Worker (static assets); fetches tags first so the version is right"
+run = "git fetch -q --tags origin && bun run deploy"
 
 [tasks.bugs]
 description = "Bug reports from the app: list, or `mise run bugs -- <id>` to download one into bugs/<id>/"

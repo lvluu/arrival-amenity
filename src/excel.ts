@@ -1,5 +1,5 @@
 // Daily amenity Excel: the staff's own workbook (public/template.xlsx, cleared copy of their sheet) with the
-// "Arrival" sheet filled from the report, one file per arrival date ("5th.xlsx"). Only what the PDF says is filled;
+// "Arrival" sheet filled from the report, one file per arrival date ("06-11-2026.xlsx"). Only what the PDF says is filled;
 // columns that need asking around (status, amenity detail, food and drink requests) stay empty for staff.
 // COLUMNS is shown in Settings, so the rules staff read are the rules the code runs.
 import type { Workbook } from "exceljs";
@@ -18,7 +18,7 @@ export const COLUMNS: [col: string, header: string, rule: string][] = [
   ["J", "REMARK", '"own transfer" or "TA transfer" from the transfer column, else empty'],
   ["K", "STATUS", "Empty, staff fill"],
   ["L", "Code", "AM numbers from Specials and Traces (AM22, AM5 = 22 and 5); 10 when the PDF has none"],
-  ["M", "AMENITY DETAIL", "Empty, staff fill"],
+  ["M", "AMENITY DETAIL", '"standard"; staff change it when the boss asks for more'],
 ];
 export const OTHER_RULES = [
   "Villas in report order from row 3; more rows are added when a day has more villas.",
@@ -39,6 +39,7 @@ export interface ArrivalRow {
   codes: string[];
 }
 
+const AMENITY = "standard"; // default amenity detail
 const FIRST = 3; // first villa row in the Arrival sheet
 const SLOTS = 17; // template rows 3..19 before the in-house block
 
@@ -94,12 +95,8 @@ const excelTime = (hhmm: string) => {
 // "05/11/26" -> "05/11/2026", as the sheet shows it.
 export const longDate = (s: string): string => `${s.slice(0, 6)}20${s.slice(6)}`;
 
-// "05/11/26" -> "5th.xlsx", the staff's own naming.
-export function xlsxName(day: string): string {
-  const n = Number(day.slice(0, 2));
-  const th = n % 100 >= 11 && n % 100 <= 13 ? "th" : (["th", "st", "nd", "rd"][n % 10] ?? "th");
-  return `${n}${th}.xlsx`;
-}
+// "06/11/26" -> "06-11-2026.xlsx": the arrival date, "/" is not allowed in file names.
+export const xlsxName = (day: string): string => `${longDate(day).replaceAll("/", "-")}.xlsx`;
 
 export async function arrivalXlsx(template: ArrayBuffer, day: string, list: ArrivalRow[]): Promise<Uint8Array> {
   const { default: ExcelJS } = await import("exceljs");
@@ -144,6 +141,7 @@ export async function arrivalXlsx(template: ArrayBuffer, day: string, list: Arri
     r.getCell("I").numFmt = DATE_FORMAT;
     r.getCell("J").value = a.remark || null;
     r.getCell("L").value = a.codes.length === 1 ? Number(a.codes[0]) : a.codes.join("\n") || null;
+    r.getCell("M").value = AMENITY;
   });
   return new Uint8Array(await wb.xlsx.writeBuffer());
 }

@@ -15,7 +15,7 @@ try {
   const errors: string[] = [];
   page.on("pageerror", (e) => errors.push(e.message));
   await page.goto(url);
-  await page.locator("#empty input[type=file]").setInputFiles(pdf);
+  await page.locator("#empty [data-start=villas] input").setInputFiles(pdf);
   await page.locator("#result").waitFor({ state: "visible", timeout: 30_000 });
   const totals = {
     villas: await page.locator("#tVillas").textContent(),

@@ -446,8 +446,10 @@ document.addEventListener("change", async (e) => {
   const file = input.type === "file" ? input.files?.[0] : undefined;
   if (!file) return;
   const bytes = new Uint8Array(await file.arrayBuffer());
+  const start = input.closest<HTMLElement>("[data-start]")?.dataset.start; // home tile: open on that feature
   input.value = "";
   await showReport(file.name, bytes, "");
+  if (start && doc) showTab(start);
   if (!doc) return;
   try {
     await saveReport({ name: file.name, bytes, savedAt: Date.now() });

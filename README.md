@@ -15,6 +15,7 @@ phones keep their settings.
   changes it. Saved per phone (localStorage); bug reports carry the table, so the full list builds up over time.
 - **Evidence**: tap a villa to see its PDF rows cut out with red boxes (row, room type, adults + children) and the
   math; the "PDF pages" tab shows full pages.
+- **Home**: two tiles, "Count beds" and "Excel"; pick one, choose the PDF, and the app opens on that feature.
 - **Tabs**: "Count beds" (the villa list above), "PDF pages" and "Excel".
 - **Excel**: fills the Arrival sheet of the daily amenity workbook (`public/template.xlsx`, the staff's own sheet with
   every guest cleared) from the report, one file per arrival date named like staff do (`5th.xlsx`); "All days" makes

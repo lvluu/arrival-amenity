@@ -126,6 +126,9 @@ export async function arrivalXlsx(template: ArrayBuffer, day: string, list: Arri
     // exceljs writes "$B1:$M21"; LibreOffice and some Excel builds then print the whole sheet tiny. "B$1" -> "$B$1".
     const area = sheet.pageSetup.printArea;
     if (area) sheet.pageSetup.printArea = area.replace(/\$/g, "").replace(/([A-Z]+)(\d+)/g, "$1$$$2");
+    // exceljs writes <pageSetUpPr> before <outlinePr>, out of schema order: Excel repairs the file and drops the
+    // sheet content. The template's outlinePr only holds Excel's defaults, so leave it out.
+    Reflect.deleteProperty(sheet.properties, "outlineProperties"); // not in the exceljs typings
   });
   list.forEach((a, i) => {
     const r = ws.getRow(FIRST + i);

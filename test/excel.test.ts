@@ -112,6 +112,17 @@ test("the Arrival tab is the selected one, so Microsoft Excel does not open it b
   ]);
 });
 
+test("sheet properties stay in schema order, so Microsoft Excel does not repair away the content", async () => {
+  const JSZip = (await import("jszip")).default;
+  const zip = await JSZip.loadAsync(await arrivalXlsx(await template(), "05/11/26", list));
+  for (const n of [1, 2, 3]) {
+    const sheetPr = (await zip.file(`xl/worksheets/sheet${n}.xml`)?.async("string"))?.match(
+      /<sheetPr>.*?<\/sheetPr>/,
+    )?.[0];
+    expect(sheetPr).not.toMatch(/<pageSetUpPr[^>]*\/>.*<outlinePr/); // CT_SheetPr: tabColor, outlinePr, pageSetUpPr
+  }
+});
+
 test("template header has real line breaks, not escaped _x000a_ text that prints literally", async () => {
   const JSZip = (await import("jszip")).default;
   const zip = await JSZip.loadAsync(await template());

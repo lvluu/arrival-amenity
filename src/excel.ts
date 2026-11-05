@@ -116,6 +116,9 @@ export async function arrivalXlsx(template: ArrayBuffer, day: string, list: Arri
   }
   const ws = wb.getWorksheet("Arrival");
   if (!ws) throw new Error("template has no Arrival sheet");
+  // exceljs reads tabSelected but drops it on write; with activeTab on Arrival and no selected sheet,
+  // Microsoft Excel opens Arrival as a blank grid (LibreOffice does not mind). Its writer still emits the flag.
+  ws.views = ws.views.map((v) => Object.assign({ tabSelected: true }, v));
   const extra = Math.max(0, list.length - SLOTS);
   if (extra) ws.duplicateRow(FIRST + SLOTS - 1, extra, true);
   ws.pageSetup.printArea = `B1:M${21 + extra}`; // staff print the arrivals only (to row 21); added rows must print too

@@ -100,6 +100,18 @@ test("print areas are written with absolute rows, so the sheets print at full si
   expect(names).toEqual(["!$A$1:$E$13", "!$A$1:$E$15", "!$B$1:$M$21"]);
 });
 
+test("the Arrival tab is the selected one, so Microsoft Excel does not open it blank", async () => {
+  const JSZip = (await import("jszip")).default;
+  const zip = await JSZip.loadAsync(await arrivalXlsx(await template(), "05/11/26", list));
+  const xml = (n: number) => zip.file(`xl/worksheets/sheet${n}.xml`)?.async("string");
+  expect(await zip.file("xl/workbook.xml")?.async("string")).toContain('activeTab="2"');
+  expect([await xml(1), await xml(2), await xml(3)].map((x) => x?.includes('tabSelected="1"'))).toEqual([
+    false,
+    false,
+    true,
+  ]);
+});
+
 test("template header has real line breaks, not escaped _x000a_ text that prints literally", async () => {
   const JSZip = (await import("jszip")).default;
   const zip = await JSZip.loadAsync(await template());

@@ -222,7 +222,7 @@ function render() {
   $("notes").innerHTML = [
     rows.length ? "" : `<p class="flag">No guest rows found. Open the Enhanced Pre Arrival Report.</p>`,
     unknown.length
-      ? `<p class="flag">New room type ${unknown.map(esc).join(", ")}: bedrooms taken from the code. <button type="button" class="link" data-open="settings">Check in settings</button></p>`
+      ? `<p class="flag">New room type ${unknown.map(esc).join(", ")}: bedrooms taken from the code. <button type="button" class="link" data-open="settings" data-stab="beds">Check in settings</button></p>`
       : "",
   ].join("");
   $("list").innerHTML = summary.villas.map(villaItem).join("");
@@ -236,7 +236,7 @@ function render() {
 }
 
 function showTab(name: string) {
-  for (const t of document.querySelectorAll<HTMLButtonElement>("[role=tab]")) {
+  for (const t of document.querySelectorAll<HTMLButtonElement>("[data-tab]")) {
     t.setAttribute("aria-selected", String(t.dataset.tab === name));
   }
   $("panel-villas").hidden = name !== "villas";
@@ -269,6 +269,13 @@ function renderSettings() {
     ...OTHER_RULES.map((rule) => `<li class="other">${esc(rule)}</li>`),
   ].join("");
   $("version").textContent = `Version ${BUILD_ID}`;
+}
+
+function showSettingsTab(name: string) {
+  for (const t of document.querySelectorAll<HTMLButtonElement>("[data-stab][role=tab]")) {
+    t.setAttribute("aria-selected", String(t.dataset.stab === name));
+  }
+  for (const p of ["beds", "excel", "phone"]) $(`s-${p}`).hidden = p !== name;
 }
 
 function update(next: Settings) {
@@ -377,7 +384,9 @@ document.addEventListener("click", (e) => {
     openRooms.clear();
     render();
   }
-  const tab = t.closest<HTMLElement>("[role=tab]")?.dataset.tab;
+  const stab = t.closest<HTMLElement>("[data-stab]")?.dataset.stab;
+  if (stab) showSettingsTab(stab);
+  const tab = t.closest<HTMLElement>("[data-tab]")?.dataset.tab;
   if (tab) showTab(tab);
   const page = t.closest<HTMLElement>(".page-link")?.dataset.page;
   if (page) {

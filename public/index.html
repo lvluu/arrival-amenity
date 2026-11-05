@@ -69,6 +69,8 @@
     .tabs { display: flex; gap: 4px; padding: 0 12px; max-width: 760px; margin: 0 auto; }
     .tabs [role=tab] { flex: 1; min-height: 40px; border: 0; background: none; border-bottom: 3px solid transparent; font-weight: 600; color: var(--muted); cursor: pointer; }
     .tabs [role=tab][aria-selected=true] { color: var(--ink); border-bottom-color: var(--accent); }
+    .stabs { padding: 0; margin: 4px 0 0; border-bottom: 1px solid var(--line); }
+    .reset { margin-top: 12px; }
 
     main { max-width: 760px; margin: 0 auto; padding: 8px 12px calc(24px + env(safe-area-inset-bottom)); }
     .status { color: var(--muted); font-size: .875rem; margin: 8px 0; }
@@ -236,7 +238,7 @@
         </div>
       </div>
       <div id="panel-excel" role="tabpanel" hidden>
-        <p class="hint">Arrival sheet of the daily amenity Excel, one file per arrival date. Status, amenity detail and the food and drink requests stay empty for you to fill. <button type="button" class="link" data-open="settings">Where each column comes from</button></p>
+        <p class="hint">Arrival sheet of the daily amenity Excel, one file per arrival date. Status, amenity detail and the food and drink requests stay empty for you to fill. <button type="button" class="link" data-open="settings" data-stab="excel">Where each column comes from</button></p>
         <div class="xlsx-actions">
           <button type="button" id="xlsxDay" class="btn primary" data-xlsx="day">Download</button>
           <button type="button" id="xlsxAll" class="btn" data-xlsx="all" hidden>All days</button>
@@ -261,6 +263,12 @@
         <h2 id="settingsTitle">Settings</h2>
         <button type="submit" class="icon" aria-label="Close settings">×</button>
       </header>
+      <div class="tabs stabs" role="tablist" aria-label="Settings">
+        <button type="button" role="tab" data-stab="beds" aria-selected="true" aria-controls="s-beds">Count beds</button>
+        <button type="button" role="tab" data-stab="excel" aria-selected="false" aria-controls="s-excel">Excel</button>
+        <button type="button" role="tab" data-stab="phone" aria-selected="false" aria-controls="s-phone">This phone</button>
+      </div>
+      <div id="s-beds" role="tabpanel">
       <h3>Bedrooms per room type</h3>
       <p class="hint">New room types from a report are added with the number in their code. Check them and tap OK, or change the number. Saved on this phone.</p>
       <ul id="roomTypes" class="types"></ul>
@@ -269,18 +277,23 @@
         <input id="newBeds" type="number" inputmode="numeric" min="0" max="99" value="1" aria-label="Bedrooms">
         <button type="button" id="addBtn" class="btn">Add</button>
       </div>
+      <button type="button" id="resetSettings" class="link reset">Reset room types</button>
+      </div>
+      <div id="s-excel" role="tabpanel" hidden>
       <h3>Excel columns</h3>
       <p class="hint">What the Excel download fills in the Arrival sheet, column by column.</p>
       <ul id="excelRules" class="rules"></ul>
+      </div>
+      <div id="s-phone" role="tabpanel" hidden>
       <h3>This phone</h3>
       <p class="hint">The last report you opened is kept on this phone and reopens next time. Nothing is uploaded unless you report a problem.</p>
       <button type="button" id="forgetReport" class="link" hidden>Forget this report</button>
+      <p id="version" class="version"></p>
+      </div>
       <footer>
-        <button type="button" id="resetSettings" class="link">Reset room types</button>
         <button type="button" class="link" data-open="report">Report a problem</button>
         <button type="submit" class="btn primary">Done</button>
       </footer>
-      <p id="version" class="version"></p>
     </form>
   </dialog>
 

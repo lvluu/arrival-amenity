@@ -1,6 +1,6 @@
 import { expect, test } from "bun:test";
 import ExcelJS from "exceljs";
-import { arrivalRows, arrivalXlsx, xlsxName } from "../src/excel";
+import { arrivalRows, arrivalXlsx, longDate, xlsxName } from "../src/excel";
 import { parseRows, summarize } from "../src/parse";
 import { DEFAULTS } from "../src/settings";
 
@@ -33,10 +33,14 @@ test("arrival rows take ETA, transfer and AM codes from each booking's lines", (
   expect(list.map((a) => [a.room, a.bedrooms, a.name, a.adults, a.children, a.eta, a.remark, a.codes])).toEqual([
     ["1030", 1, "*Doe,Jane,Mrs.", 2, 0, "17:30", "", ["22", "5"]],
     ["4200", 1, "Roe,Kai,Mr.", 2, 0, "no time", "own transfer", ["10"]],
-    ["4210", 1, "*Moe,Kate,Ms.", 2, 1, "12:10", "own transfer", []],
+    ["4210", 1, "*Moe,Kate,Ms.", 2, 1, "12:10", "own transfer", ["10"]],
     ["5010", 1, "*Poe,Ann,Mrs.", 2, 0, "21:45", "", ["11"]],
-    ["6070", 2, "*Lee,Adele,Ms.", 3, 0, "17:00", "TA transfer", []],
+    ["6070", 2, "*Lee,Adele,Ms.", 3, 0, "17:00", "TA transfer", ["10"]], // no AM code: 10,
   ]);
+});
+
+test("sheet date shows the full year", () => {
+  expect(longDate("05/11/26")).toBe("05/11/2026");
 });
 
 test("file name is the day of month with its ordinal", () => {
@@ -77,6 +81,7 @@ test("fills the Arrival sheet of the template", async () => {
   expect(at("G3")).toEqual(new Date(Date.UTC(1899, 11, 30, 17, 30))); // time-only cell, read back as Excel day 0
   expect([at("G4"), at("J4"), at("L4"), at("F5")]).toEqual(["no time", "own transfer", 10, 1]);
   expect([at("B7"), at("J7")]).toEqual(["6070\n2", "TA transfer"]);
+  expect(["G3", "H3", "I3"].map((c) => ws?.getCell(c).numFmt)).toEqual(["h:mm", "dd/mm/yyyy", "dd/mm/yyyy"]);
   expect(at("B25")).toBe("ROOM"); // in-house header stays where staff expect it
 });
 
@@ -85,6 +90,21 @@ test("a day with more villas than template rows pushes the in-house block down",
   const ws = (await read(await arrivalXlsx(await template(), "05/11/26", many))).getWorksheet("Arrival");
   expect(ws?.getCell("B27").value).toBe(1024);
   expect(ws?.getCell("B33").value).toBe("ROOM");
+  expect(ws?.pageSetup.printArea).toBe("B1:M29"); // printed page grows with the rows
+});
+
+test("print areas are written with absolute rows, so the sheets print at full size", async () => {
+  const JSZip = (await import("jszip")).default;
+  const zip = await JSZip.loadAsync(await arrivalXlsx(await template(), "05/11/26", list));
+  const names = (await zip.file("xl/workbook.xml")?.async("string"))?.match(/!\$[A-Z]+\$?\d+:\$[A-Z]+\$?\d+/g);
+  expect(names).toEqual(["!$A$1:$E$13", "!$A$1:$E$15", "!$B$1:$M$21"]);
+});
+
+test("template header has real line breaks, not escaped _x000a_ text that prints literally", async () => {
+  const JSZip = (await import("jszip")).default;
+  const zip = await JSZip.loadAsync(await template());
+  const xml = await Promise.all(Object.values(zip.files).map((f) => f.async("string")));
+  expect(xml.some((x) => x.includes("_x000a_"))).toBe(false);
 });
 
 test("the template ships no guest names", async () => {

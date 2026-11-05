@@ -17,7 +17,7 @@ export const COLUMNS: [col: string, header: string, rule: string][] = [
   ["I", "DEPT DATE", "Departure date"],
   ["J", "REMARK", '"own transfer" or "TA transfer" from the transfer column, else empty'],
   ["K", "STATUS", "Empty, staff fill"],
-  ["L", "Code", "AM numbers from Specials and Traces (AM22, AM5 = 22 and 5)"],
+  ["L", "Code", "AM numbers from Specials and Traces (AM22, AM5 = 22 and 5); 10 when the PDF has none"],
   ["M", "AMENITY DETAIL", "Empty, staff fill"],
 ];
 export const OTHER_RULES = [
@@ -55,6 +55,7 @@ function arrivalRow(v: Villa, texts: string[], starts: number[], row: Row): Arri
   const remark = /own transfer/i.test(conf) ? "own transfer" : /TA transfer/i.test(conf) ? "TA transfer" : "";
   const all = v.lines.flatMap((l) => block(texts, starts, l)).join(" ");
   const codes = [...new Set([...all.matchAll(/\bAM(\d+)\b/g)].map((m) => m[1]))];
+  const DEFAULT_CODE = "10"; // standard amenity, what staff write when the report names none
   return {
     room: v.room,
     bedrooms: v.bedrooms,
@@ -65,7 +66,7 @@ function arrivalRow(v: Villa, texts: string[], starts: number[], row: Row): Arri
     arrival: row.arrival,
     departure: row.departure,
     remark,
-    codes,
+    codes: codes.length ? codes : [DEFAULT_CODE],
   };
 }
 
@@ -84,10 +85,14 @@ const excelDate = (s: string) => {
   const [d, m, y] = s.split("/").map(Number);
   return new Date(Date.UTC(2000 + y, m - 1, d));
 };
+const DATE_FORMAT = "dd/mm/yyyy";
 const excelTime = (hhmm: string) => {
   const [h, m] = hhmm.split(":").map(Number);
   return (h * 60 + m) / 1440;
 };
+
+// "05/11/26" -> "05/11/2026", as the sheet shows it.
+export const longDate = (s: string): string => `${s.slice(0, 6)}20${s.slice(6)}`;
 
 // "05/11/26" -> "5th.xlsx", the staff's own naming.
 export function xlsxName(day: string): string {
@@ -111,7 +116,14 @@ export async function arrivalXlsx(template: ArrayBuffer, day: string, list: Arri
   }
   const ws = wb.getWorksheet("Arrival");
   if (!ws) throw new Error("template has no Arrival sheet");
-  if (list.length > SLOTS) ws.duplicateRow(FIRST + SLOTS - 1, list.length - SLOTS, true);
+  const extra = Math.max(0, list.length - SLOTS);
+  if (extra) ws.duplicateRow(FIRST + SLOTS - 1, extra, true);
+  ws.pageSetup.printArea = `B1:M${21 + extra}`; // staff print the arrivals only (to row 21); added rows must print too
+  wb.eachSheet((sheet) => {
+    // exceljs writes "$B1:$M21"; LibreOffice and some Excel builds then print the whole sheet tiny. "B$1" -> "$B$1".
+    const area = sheet.pageSetup.printArea;
+    if (area) sheet.pageSetup.printArea = area.replace(/\$/g, "").replace(/([A-Z]+)(\d+)/g, "$1$$$2");
+  });
   list.forEach((a, i) => {
     const r = ws.getRow(FIRST + i);
     r.getCell("B").value = a.bedrooms > 1 ? `${a.room}\n${a.bedrooms}` : Number(a.room);
@@ -121,6 +133,9 @@ export async function arrivalXlsx(template: ArrayBuffer, day: string, list: Arri
     r.getCell("G").value = a.eta === "no time" ? a.eta : excelTime(a.eta);
     r.getCell("H").value = excelDate(a.arrival);
     r.getCell("I").value = excelDate(a.departure);
+    r.getCell("G").numFmt = "h:mm"; // set, not inherited: added rows must look the same
+    r.getCell("H").numFmt = DATE_FORMAT;
+    r.getCell("I").numFmt = DATE_FORMAT;
     r.getCell("J").value = a.remark || null;
     r.getCell("L").value = a.codes.length === 1 ? Number(a.codes[0]) : a.codes.join("\n") || null;
   });

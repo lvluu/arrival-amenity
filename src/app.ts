@@ -1,7 +1,7 @@
 import { sendBug } from "./bug-report";
 import { type Kind, prepare, save } from "./downloads";
 import { cropRow, markPage, release } from "./evidence";
-import { arrivalRows, arrivalXlsx, COLUMNS, OTHER_RULES, xlsxName } from "./excel";
+import { arrivalRows, arrivalXlsx, COLUMNS, longDate, OTHER_RULES, xlsxName } from "./excel";
 import { arrivalDates, mainLine, parseRows, type Row, reportDate, type Summary, summarize, type Villa } from "./parse";
 import { type Line, openPdf, type PageImage, type PDFDocumentProxy, readLines, renderPage } from "./pdf";
 import { confirm, DEFAULTS, loadSettings, type Settings, sanitize, saveSettings, withDetected } from "./settings";
@@ -138,7 +138,8 @@ function renderExcel() {
   $("excelRows").innerHTML = list
     .map(
       (a) => `<tr><td><b>${esc(a.room)}</b>${a.bedrooms > 1 ? `<br>${a.bedrooms}` : ""}</td><td>${esc(a.name)}</td>
-      <td>${a.adults}${a.children ? ` + ${a.children}` : ""}</td><td>${esc(a.eta)}</td><td>${esc(a.remark)}</td><td>${esc(a.codes.join(" "))}</td></tr>`,
+      <td>${a.adults}</td><td>${a.children || ""}</td><td>${esc(a.eta)}</td><td>${esc(longDate(a.arrival))}</td>
+      <td>${esc(longDate(a.departure))}</td><td>${esc(a.remark)}</td><td>${esc(a.codes.join(" "))}</td></tr>`,
     )
     .join("");
   const days = arrivalDates(rows);

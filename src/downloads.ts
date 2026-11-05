@@ -17,17 +17,19 @@ export function prepare(input: ExportInput, original: Uint8Array): Record<Kind, 
   return { order: file("order"), evidence: file("evidence") };
 }
 
-// iPhone: share sheet ("Save to Files", Mail, Zalo...). Elsewhere: a normal download.
-export async function save(file: File): Promise<void> {
-  if (isIOS() && navigator.canShare?.({ files: [file] })) {
+// iPhone: share sheet ("Save to Files", Mail, Zalo...). Elsewhere: normal downloads, one per file.
+export async function save(...files: File[]): Promise<void> {
+  if (isIOS() && navigator.canShare?.({ files })) {
     try {
-      await navigator.share({ files: [file], title: file.name });
+      await navigator.share({ files, title: files[0]?.name });
       return;
     } catch (err) {
       if (err instanceof DOMException && err.name === "AbortError") return; // closed the share sheet
     }
   }
-  const url = URL.createObjectURL(file);
-  Object.assign(document.createElement("a"), { href: url, download: file.name }).click();
-  setTimeout(() => URL.revokeObjectURL(url), 60_000);
+  for (const file of files) {
+    const url = URL.createObjectURL(file);
+    Object.assign(document.createElement("a"), { href: url, download: file.name }).click();
+    setTimeout(() => URL.revokeObjectURL(url), 60_000);
+  }
 }

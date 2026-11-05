@@ -4,7 +4,7 @@
 const sw = self as unknown as ServiceWorkerGlobalScope;
 
 const CACHE = `arrival-fruit-${BUILD_ID}`;
-const SHELL = ["./", "app.js", "pdf.worker.min.mjs", "manifest.json", "icon.svg"];
+const SHELL = ["./", "app.js", "pdf.worker.min.mjs", "manifest.json", "icon.svg", "template.xlsx"];
 
 sw.addEventListener("install", (e) => {
   e.waitUntil(caches.open(CACHE).then((c) => c.addAll(SHELL)));

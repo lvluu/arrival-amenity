@@ -115,3 +115,12 @@ export function summarize(rows: Row[], settings: Settings): Summary {
     },
   };
 }
+
+// The booking row with guests (the others are sharers): its name, room type and ETA stand for the villa.
+export const mainLine = (v: Villa): number =>
+  v.lines[
+    Math.max(
+      0,
+      v.rowGuests.findIndex((g) => g > 0),
+    )
+  ];

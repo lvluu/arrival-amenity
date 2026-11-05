@@ -151,6 +151,18 @@
     .check input { width: 22px; height: 22px; margin: 0; flex: none; accent-color: var(--accent); }
     .error, .sent { font-size: .875rem; margin: 8px 0 0; min-height: 1.2em; }
 
+    /* excel tab */
+    .xlsx-actions { display: flex; flex-wrap: wrap; gap: 8px; margin: 4px 0; }
+    .xlsx-actions .btn[aria-busy=true] { opacity: .6; cursor: progress; }
+    .table-wrap { overflow-x: auto; background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); }
+    .sheet-preview { width: 100%; border-collapse: collapse; font-size: .8125rem; }
+    .sheet-preview th { text-align: left; color: var(--muted); font-weight: 600; padding: 6px 8px; border-bottom: 1px solid var(--line); white-space: nowrap; }
+    .sheet-preview td { padding: 6px 8px; border-top: 1px solid var(--line); vertical-align: top; font-variant-numeric: tabular-nums; }
+    .rules { list-style: none; padding: 0; margin: 0; font-size: .875rem; }
+    .rules li { display: grid; grid-template-columns: 1.6em 1fr; column-gap: 6px; padding: 6px 0; border-top: 1px solid var(--line); }
+    .rules li span { grid-column: 2; color: var(--muted); }
+    .rules li.other { display: block; color: var(--muted); }
+
     @media (prefers-reduced-motion: reduce) { *, dialog[open] { animation: none !important; transition: none !important; } }
   </style>
 </head>
@@ -178,8 +190,9 @@
         <div class="villas-count"><b id="tVillas">0</b> villas</div>
       </div>
       <div class="tabs" role="tablist" aria-label="View">
-        <button type="button" role="tab" data-tab="villas" aria-selected="true" aria-controls="panel-villas">Villas</button>
+        <button type="button" role="tab" data-tab="villas" aria-selected="true" aria-controls="panel-villas">Count beds</button>
         <button type="button" role="tab" data-tab="pages" aria-selected="false" aria-controls="panel-pages">PDF pages</button>
+        <button type="button" role="tab" data-tab="excel" aria-selected="false" aria-controls="panel-excel">Excel</button>
       </div>
     </div>
   </div>
@@ -199,6 +212,20 @@
         <div class="after-list">
           <p id="skipped"></p>
           <button type="button" class="link" data-open="report">Something wrong? Report it</button>
+        </div>
+      </div>
+      <div id="panel-excel" role="tabpanel" hidden>
+        <p class="hint">Arrival sheet of the daily amenity Excel, one file per arrival date. Status, amenity detail and the food and drink requests stay empty for you to fill. <button type="button" class="link" data-open="settings">Where each column comes from</button></p>
+        <div class="xlsx-actions">
+          <button type="button" id="xlsxDay" class="btn primary" data-xlsx="day">Download</button>
+          <button type="button" id="xlsxAll" class="btn" data-xlsx="all" hidden>All days</button>
+        </div>
+        <p id="xlsxError" class="error" role="alert"></p>
+        <div class="table-wrap">
+          <table class="sheet-preview">
+            <thead><tr><th>Room</th><th>Guest name</th><th>Guests</th><th>Arr. time</th><th>Remark</th><th>Code</th></tr></thead>
+            <tbody id="excelRows"></tbody>
+          </table>
         </div>
       </div>
       <div id="panel-pages" role="tabpanel" hidden>
@@ -221,6 +248,9 @@
         <input id="newBeds" type="number" inputmode="numeric" min="0" max="99" value="1" aria-label="Bedrooms">
         <button type="button" id="addBtn" class="btn">Add</button>
       </div>
+      <h3>Excel columns</h3>
+      <p class="hint">What the Excel download fills in the Arrival sheet, column by column.</p>
+      <ul id="excelRules" class="rules"></ul>
       <h3>This phone</h3>
       <p class="hint">The last report you opened is kept on this phone and reopens next time. Nothing is uploaded unless you report a problem.</p>
       <button type="button" id="forgetReport" class="link" hidden>Forget this report</button>

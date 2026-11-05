@@ -16,6 +16,7 @@
   },
   "packageManager": "bun@1.4.4",
   "dependencies": {
+    "exceljs": "^4.4.0",
     "pdf-lib": "^1.17.1",
     "pdfjs-dist": "^6.5.438"
   },

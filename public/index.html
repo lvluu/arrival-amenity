@@ -45,7 +45,8 @@
     .btn.primary { background: var(--accent); border-color: var(--accent); color: var(--on-accent); }
     .btn.primary:hover { background: oklch(0.38 0.075 175); }
     .btn.icon-only { width: 44px; padding: 0; flex: none; }
-    .btn input[type=file] { position: absolute; width: 1px; height: 1px; opacity: 0; }
+    .btn:has(input[type=file]) { position: relative; }
+    .btn input[type=file] { position: absolute; inset: 0; width: 1px; height: 1px; opacity: 0; } /* inside the button: else it pokes past the page edge on phones */
     .btn:focus-within { outline: 3px solid var(--accent); outline-offset: 2px; }
     .btn svg { width: 20px; height: 20px; }
     .btn:disabled { opacity: .6; }
@@ -68,6 +69,8 @@
     .tabs { display: flex; gap: 4px; padding: 0 12px; max-width: 760px; margin: 0 auto; }
     .tabs [role=tab] { flex: 1; min-height: 40px; border: 0; background: none; border-bottom: 3px solid transparent; font-weight: 600; color: var(--muted); cursor: pointer; }
     .tabs [role=tab][aria-selected=true] { color: var(--ink); border-bottom-color: var(--accent); }
+    .stabs { padding: 0; margin: 4px 0 0; border-bottom: 1px solid var(--line); }
+    .reset { margin-top: 12px; }
 
     main { max-width: 760px; margin: 0 auto; padding: 8px 12px calc(24px + env(safe-area-inset-bottom)); }
     .status { color: var(--muted); font-size: .875rem; margin: 8px 0; }
@@ -77,7 +80,14 @@
     .empty { min-height: calc(100dvh - var(--bar-h) - 80px); display: flex; flex-direction: column; justify-content: center; gap: 12px; padding: 24px 4px; }
     .empty h2 { font-size: 1.5rem; line-height: 1.2; margin: 0; text-wrap: balance; letter-spacing: -0.015em; }
     .empty p { margin: 0; color: var(--muted); max-width: 46ch; }
-    .empty .btn { align-self: flex-start; min-height: 52px; padding: 0 22px; font-size: 1.05rem; margin-top: 8px; }
+    .tiles { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 8px; }
+    .tile { position: relative; aspect-ratio: 1; display: flex; flex-direction: column; justify-content: flex-end; gap: 4px; padding: 16px; border: 1px solid var(--line); border-radius: 16px; background: var(--surface); cursor: pointer; transition: background-color .15s ease-out, border-color .15s ease-out; }
+    .tile:hover { background: var(--accent-soft); border-color: var(--accent); }
+    .tile:focus-within { outline: 3px solid var(--accent); outline-offset: 2px; }
+    .tile svg { width: 60px; height: 60px; padding: 10px; border-radius: 14px; background: var(--accent-soft); color: var(--accent); margin-bottom: auto; }
+    .tile b { font-size: 1.125rem; }
+    .tile span { font-size: .8125rem; color: var(--muted); line-height: 1.3; }
+    .tile input { position: absolute; inset: 0; width: 1px; height: 1px; opacity: 0; }
 
     .source { color: var(--muted); font-size: .8125rem; margin: 0 0 6px; overflow-wrap: anywhere; }
     .flag { display: inline-block; background: var(--warn-bg); color: var(--warn-ink); font-size: .8125rem; font-weight: 600; padding: 2px 8px; border-radius: 6px; margin: 0 0 6px; }
@@ -151,6 +161,18 @@
     .check input { width: 22px; height: 22px; margin: 0; flex: none; accent-color: var(--accent); }
     .error, .sent { font-size: .875rem; margin: 8px 0 0; min-height: 1.2em; }
 
+    /* excel tab */
+    .xlsx-actions { display: flex; flex-wrap: wrap; gap: 8px; margin: 4px 0; }
+    .xlsx-actions .btn[aria-busy=true] { opacity: .6; cursor: progress; }
+    .table-wrap { overflow-x: auto; background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); }
+    .sheet-preview { width: 100%; border-collapse: collapse; font-size: .8125rem; }
+    .sheet-preview th { text-align: left; color: var(--muted); font-weight: 600; padding: 6px 8px; border-bottom: 1px solid var(--line); white-space: nowrap; }
+    .sheet-preview td { padding: 6px 8px; border-top: 1px solid var(--line); vertical-align: top; font-variant-numeric: tabular-nums; }
+    .rules { list-style: none; padding: 0; margin: 0; font-size: .875rem; }
+    .rules li { display: grid; grid-template-columns: 1.6em 1fr; column-gap: 6px; padding: 6px 0; border-top: 1px solid var(--line); }
+    .rules li span { grid-column: 2; color: var(--muted); }
+    .rules li.other { display: block; color: var(--muted); }
+
     @media (prefers-reduced-motion: reduce) { *, dialog[open] { animation: none !important; transition: none !important; } }
   </style>
 </head>
@@ -178,8 +200,9 @@
         <div class="villas-count"><b id="tVillas">0</b> villas</div>
       </div>
       <div class="tabs" role="tablist" aria-label="View">
-        <button type="button" role="tab" data-tab="villas" aria-selected="true" aria-controls="panel-villas">Villas</button>
+        <button type="button" role="tab" data-tab="villas" aria-selected="true" aria-controls="panel-villas">Count beds</button>
         <button type="button" role="tab" data-tab="pages" aria-selected="false" aria-controls="panel-pages">PDF pages</button>
+        <button type="button" role="tab" data-tab="excel" aria-selected="false" aria-controls="panel-excel">Excel</button>
       </div>
     </div>
   </div>
@@ -187,9 +210,22 @@
   <main>
     <p id="status" class="status" role="status"></p>
     <section id="empty" class="empty">
-      <h2>Open today's Enhanced Pre Arrival Report</h2>
-      <p>You get the bedrooms and guests for each arriving villa, with the PDF row boxed in red as proof. The PDF stays on this phone, and the app remembers it until you open a new one.</p>
-      <label class="btn primary">Open PDF<input type="file" accept="application/pdf,.pdf"></label>
+      <h2>What do you need from today's report?</h2>
+      <p>Pick one, then open the Enhanced Pre Arrival Report. The PDF stays on this phone, and the app remembers it until you open a new one.</p>
+      <div class="tiles">
+        <label class="tile" data-start="villas">
+          <svg viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 12v26M6 30h36v8M42 30v-6a5 5 0 0 0-5-5H22v11"/><circle cx="14" cy="23" r="4"/></svg>
+          <b>Count beds</b>
+          <span>Bedrooms and guests per villa, with proof</span>
+          <input type="file" accept="application/pdf,.pdf">
+        </label>
+        <label class="tile" data-start="excel">
+          <svg viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="7" y="7" width="34" height="34" rx="4"/><path d="M7 17h34M7 27h34M19 7v34"/></svg>
+          <b>Excel</b>
+          <span>Daily amenity sheet, one file per day</span>
+          <input type="file" accept="application/pdf,.pdf">
+        </label>
+      </div>
     </section>
     <section id="result" hidden>
       <p id="source" class="source"></p>
@@ -199,6 +235,20 @@
         <div class="after-list">
           <p id="skipped"></p>
           <button type="button" class="link" data-open="report">Something wrong? Report it</button>
+        </div>
+      </div>
+      <div id="panel-excel" role="tabpanel" hidden>
+        <p class="hint">Arrival sheet of the daily amenity Excel, one file per arrival date. Status, amenity detail and the food and drink requests stay empty for you to fill. <button type="button" class="link" data-open="settings" data-stab="excel">Where each column comes from</button></p>
+        <div class="xlsx-actions">
+          <button type="button" id="xlsxDay" class="btn primary" data-xlsx="day">Download</button>
+          <button type="button" id="xlsxAll" class="btn" data-xlsx="all" hidden>All days</button>
+        </div>
+        <p id="xlsxError" class="error" role="alert"></p>
+        <div class="table-wrap">
+          <table class="sheet-preview">
+            <thead><tr><th>Room</th><th>Guest name</th><th>No of guest</th><th>Kid</th><th>Arr time</th><th>Arr date</th><th>Dept date</th><th>Remark</th><th>Code</th></tr></thead>
+            <tbody id="excelRows"></tbody>
+          </table>
         </div>
       </div>
       <div id="panel-pages" role="tabpanel" hidden>
@@ -213,6 +263,12 @@
         <h2 id="settingsTitle">Settings</h2>
         <button type="submit" class="icon" aria-label="Close settings">×</button>
       </header>
+      <div class="tabs stabs" role="tablist" aria-label="Settings">
+        <button type="button" role="tab" data-stab="beds" aria-selected="true" aria-controls="s-beds">Count beds</button>
+        <button type="button" role="tab" data-stab="excel" aria-selected="false" aria-controls="s-excel">Excel</button>
+        <button type="button" role="tab" data-stab="phone" aria-selected="false" aria-controls="s-phone">This phone</button>
+      </div>
+      <div id="s-beds" role="tabpanel">
       <h3>Bedrooms per room type</h3>
       <p class="hint">New room types from a report are added with the number in their code. Check them and tap OK, or change the number. Saved on this phone.</p>
       <ul id="roomTypes" class="types"></ul>
@@ -221,15 +277,23 @@
         <input id="newBeds" type="number" inputmode="numeric" min="0" max="99" value="1" aria-label="Bedrooms">
         <button type="button" id="addBtn" class="btn">Add</button>
       </div>
+      <button type="button" id="resetSettings" class="link reset">Reset room types</button>
+      </div>
+      <div id="s-excel" role="tabpanel" hidden>
+      <h3>Excel columns</h3>
+      <p class="hint">What the Excel download fills in the Arrival sheet, column by column.</p>
+      <ul id="excelRules" class="rules"></ul>
+      </div>
+      <div id="s-phone" role="tabpanel" hidden>
       <h3>This phone</h3>
       <p class="hint">The last report you opened is kept on this phone and reopens next time. Nothing is uploaded unless you report a problem.</p>
       <button type="button" id="forgetReport" class="link" hidden>Forget this report</button>
+      <p id="version" class="version"></p>
+      </div>
       <footer>
-        <button type="button" id="resetSettings" class="link">Reset room types</button>
         <button type="button" class="link" data-open="report">Report a problem</button>
         <button type="submit" class="btn primary">Done</button>
       </footer>
-      <p id="version" class="version"></p>
     </form>
   </dialog>
 

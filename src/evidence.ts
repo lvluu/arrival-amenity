@@ -1,4 +1,4 @@
-import type { Villa } from "./parse";
+import { mainLine, type Villa } from "./parse";
 import { fields } from "./fields";
 import { box, type Line, type PageImage } from "./pdf";
 
@@ -11,13 +11,6 @@ export function label(v: Villa): string {
 }
 
 // The villa's main booking row: the first one with guests. Its room type gives the bedrooms.
-export const mainLine = (v: Villa): number =>
-  v.lines[
-    Math.max(
-      0,
-      v.rowGuests.findIndex((g) => g > 0),
-    )
-  ];
 
 // Copy of a clean page: every counted row boxed red; on the main row the room type is boxed thick and labelled.
 export function markPage(src: PageImage, page: number, villas: Villa[], lines: Line[]): HTMLCanvasElement {

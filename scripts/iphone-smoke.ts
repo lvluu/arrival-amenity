@@ -1,4 +1,5 @@
-// iPhone check in WebKit (Safari's engine): open a report, read the totals, open a villa's proof, download the order.
+// iPhone check in WebKit (Safari's engine): open a report, read the totals, open a villa's proof, download the order
+// and the day's Excel.
 //   mise run dev            (Worker on http://localhost:8787), then:
 //   bun scripts/iphone-smoke.ts <report.pdf> [url]
 // Needs the Playwright WebKit build that matches playwright-core (`bunx playwright-core install webkit`).
@@ -14,7 +15,7 @@ try {
   const errors: string[] = [];
   page.on("pageerror", (e) => errors.push(e.message));
   await page.goto(url);
-  await page.locator("#empty input[type=file]").setInputFiles(pdf);
+  await page.locator("#empty [data-start=villas] input").setInputFiles(pdf);
   await page.locator("#result").waitFor({ state: "visible", timeout: 30_000 });
   const totals = {
     villas: await page.locator("#tVillas").textContent(),
@@ -43,7 +44,13 @@ try {
       download: file.suggestedFilename(),
     });
   }
-  console.log(JSON.stringify({ totals, why, download: download.suggestedFilename(), days, errors }, null, 2));
+  await page.keyboard.press("Escape");
+  await page.locator("[data-tab=excel]").click();
+  const [xlsx] = await Promise.all([page.waitForEvent("download"), page.locator("#xlsxDay").click()]);
+  await page.screenshot({ path: "bugs/iphone-smoke-excel.png", fullPage: true });
+  const excel = { rows: await page.locator("#excelRows tr").count(), download: xlsx.suggestedFilename() };
+  await xlsx.saveAs(`bugs/${excel.download}`);
+  console.log(JSON.stringify({ totals, why, download: download.suggestedFilename(), days, excel, errors }, null, 2));
   if (errors.length) process.exit(1);
 } finally {
   await browser.close();

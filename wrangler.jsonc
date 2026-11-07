@@ -1,6 +1,6 @@
 {
   "$schema": "node_modules/wrangler/config-schema.json",
-  "name": "arrival-fruit",
+  "name": "arrival-amenity",
   "main": "src/worker.ts",
   "compatibility_date": "2026-10-01",
   // The app is static and parses PDFs in the browser. The Worker only runs for /api/* (bug reports).

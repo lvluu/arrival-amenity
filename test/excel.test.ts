@@ -1,6 +1,6 @@
 import { expect, test } from "bun:test";
 import ExcelJS from "exceljs";
-import { arrivalRows, arrivalXlsx, consecutiveDeparture, longDate, xlsxName } from "../src/excel";
+import { arrivalRows, arrivalXlsx, consecutiveDeparture, consecutiveLines, longDate, xlsxName } from "../src/excel";
 import { parseRows, summarize } from "../src/parse";
 import { DEFAULTS } from "../src/settings";
 
@@ -137,7 +137,7 @@ test("the template ships no guest names", async () => {
   expect(names).toEqual([]);
 });
 
-test("consecutive booking is found; the sheet departure stays the row's", () => {
+test("consecutive booking is found", () => {
   expect(consecutiveDeparture("Party 3106883: consecutive bookings (06-10 Nov 2026)")).toBe("10/11/26");
   expect(consecutiveDeparture("consecutive booking (30 Oct - 02 Nov 2026)")).toBe("02/11/26");
   expect(consecutiveDeparture("Party 1: family travelling together")).toBeNull();
@@ -153,4 +153,29 @@ test("consecutive booking is found; the sheet departure stays the row's", () => 
     ["08/11/26", "10/11/26"],
     ["09/11/26", null],
   ]);
+});
+
+test("sheet writes a consecutive departure as 'date (Consecutive)'", async () => {
+  const t = [
+    "Arrival Date 06/11/26",
+    "5220 *Doe,Fer,Mr. 06/11/26 08/11/26 2 VK 2 0 1 SPE WEB EMP EMPECE26 USD 129 CA 0",
+    "Res. Comments Reservation Party 1: consecutive bookings (06-10 Nov 2026)",
+    "4200 Roe,Kai,Mr. 06/11/26 09/11/26 4 VK 2 0 1 WHO EM DPG WO20D USD 568 CA 0",
+  ];
+  const r = parseRows(t);
+  const wb = await read(await arrivalXlsx(await template(), "06/11/26", arrivalRows(summarize(r, DEFAULTS), r, t)));
+  const ws = wb.getWorksheet("Arrival");
+  const at = (c: string) => ws?.getCell(c).value;
+  expect(at("I3")).toBe("10/11/2026 (Consecutive)");
+  expect(at("I4")).toEqual(new Date(Date.UTC(2026, 10, 9)));
+});
+
+test("finds the line of each villa's consecutive comment", () => {
+  const t = [
+    "5220 *Doe,Fer,Mr. 06/11/26 08/11/26 2 VK 2 0 1 SPE WEB EMP EMPECE26 USD 129 CA 0",
+    "Res. Comments Reservation Party 1: consecutive bookings (06-10 Nov 2026)",
+    "4200 Roe,Kai,Mr. 06/11/26 09/11/26 4 VK 2 0 1 WHO EM DPG WO20D USD 568 CA 0",
+  ];
+  const r = parseRows(t);
+  expect(consecutiveLines(summarize(r, DEFAULTS), r, t)).toEqual(new Map([["5220", [1]]]));
 });

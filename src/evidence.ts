@@ -1,5 +1,5 @@
-import { mainLine, type Villa } from "./parse";
 import { fields } from "./fields";
+import { mainLine, type Villa } from "./parse";
 import { box, type Line, type PageImage } from "./pdf";
 
 const RED = "#d10000";
@@ -13,7 +13,13 @@ export function label(v: Villa): string {
 // The villa's main booking row: the first one with guests. Its room type gives the bedrooms.
 
 // Copy of a clean page: every counted row boxed red; on the main row the room type is boxed thick and labelled.
-export function markPage(src: PageImage, page: number, villas: Villa[], lines: Line[]): HTMLCanvasElement {
+export function markPage(
+  src: PageImage,
+  page: number,
+  villas: Villa[],
+  lines: Line[],
+  notes: number[] = [],
+): HTMLCanvasElement {
   const canvas = Object.assign(document.createElement("canvas"), {
     width: src.canvas.width,
     height: src.canvas.height,
@@ -41,7 +47,42 @@ export function markPage(src: PageImage, page: number, villas: Villa[], lines: L
       ctx.fillText(text, x + 1, y - 5 * s);
     }
   }
+  for (const n of notes.filter((n) => lines[n].page === page)) {
+    ctx.lineWidth = 2.6 * s;
+    const { cx, cy, rx, ry } = ring(src, lines[n]);
+    ctx.beginPath(); // a circle (ellipse) round the "consecutive bookings" comment
+    ctx.ellipse(cx, cy, rx, ry, 0, 0, Math.PI * 2);
+    ctx.stroke();
+  }
   return canvas;
+}
+
+// The comment text itself, not the "Res. Comments / Reservation" labels left of it.
+const commentItems = (line: Line) => {
+  const hit = line.items.filter((i) => /consecutive|party|\(\d/i.test(i.str));
+  return hit.length ? hit : line.items;
+};
+
+// Ellipse round the comment text, in canvas pixels.
+function ring(src: PageImage, line: Line) {
+  const s = src.viewport.scale;
+  const [x, y, w, h] = box(src.viewport, commentItems(line), 0);
+  return { cx: x + w / 2, cy: y + h / 2, rx: (w / 2) * 1.12 + 12 * s, ry: h * 0.5 * 1.5 + 8 * s };
+}
+
+// Proof strip for a "consecutive bookings" comment: its line, cut from the marked page with the red circle.
+export function cropComment(marked: HTMLCanvasElement, src: PageImage, line: Line): HTMLCanvasElement {
+  const s = src.viewport.scale;
+  const { cx, cy, rx, ry } = ring(src, line);
+  const pad = 4 * s;
+  const [x, y, w, h] = [cx - rx - pad, cy - ry - pad, 2 * (rx + pad), 2 * (ry + pad)];
+  const out = Object.assign(document.createElement("canvas"), { width: w, height: h });
+  const ctx = out.getContext("2d");
+  if (!ctx) throw new Error("canvas 2d context unavailable");
+  ctx.fillStyle = "#fff";
+  ctx.fillRect(0, 0, w, h);
+  ctx.drawImage(marked, x, y, w, h, 0, 0, w, h);
+  return out;
 }
 
 // Proof strip for one guest row, sized for a phone: "room + name" above "dates .. type .. adults, children".

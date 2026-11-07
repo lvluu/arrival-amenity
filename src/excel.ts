@@ -14,7 +14,11 @@ export const COLUMNS: [col: string, header: string, rule: string][] = [
   ["F", "KID", "Children, empty when 0"],
   ["G", "ARR TIME", 'ETA; 14:59 (no ETA in Opera) becomes "no time"'],
   ["H", "ARR DATE", "Arrival date"],
-  ["I", "DEPT DATE", "Departure date"],
+  [
+    "I",
+    "DEPT DATE",
+    'Departure date; a "consecutive bookings" comment replaces it with the end of that range, written "10/11/2026 (Consecutive)"',
+  ],
   ["J", "REMARK", '"own transfer" or "TA transfer" from the transfer column, else empty'],
   ["K", "STATUS", "Empty, staff fill"],
   ["L", "Code", "AM numbers from Specials and Traces (AM22, AM5 = 22 and 5); 10 when the PDF has none"],
@@ -35,7 +39,7 @@ export interface ArrivalRow {
   eta: string; // "17:30" or "no time"
   arrival: string; // dd/mm/yy
   departure: string;
-  consecutive: string | null; // departure of a "consecutive bookings" comment (shown in the app only, not in the xlsx)
+  consecutive: string | null; // departure of a "consecutive bookings" comment; it replaces `departure` in the sheet
   remark: string;
   codes: string[];
 }
@@ -59,6 +63,21 @@ export function consecutiveDeparture(text: string): string | null {
   const month = m ? MONTHS.indexOf(m[2].toLowerCase()) + 1 : 0;
   if (!m || !month) return null;
   return [m[1].padStart(2, "0"), String(month).padStart(2, "0"), m[3].slice(2)].join("/");
+}
+
+const CONSECUTIVE = /consecutive bookings?\s*\(/i;
+
+// Report lines holding each villa's "consecutive bookings" comment (room -> lines), for the red circle on the PDF.
+export function consecutiveLines(summary: Summary, rows: Row[], texts: string[]): Map<string, number[]> {
+  const starts = rows.map((r) => r.line);
+  const found = summary.villas.map((v) => {
+    const at = v.lines.flatMap((l) => {
+      const end = starts.find((s) => s > l) ?? texts.length;
+      return texts.flatMap((t, i) => (i > l && i < end && CONSECUTIVE.test(t) ? [i] : []));
+    });
+    return [v.room, at] as const;
+  });
+  return new Map(found.filter(([, at]) => at.length));
 }
 
 function arrivalRow(v: Villa, texts: string[], starts: number[], row: Row): ArrivalRow {
@@ -149,7 +168,7 @@ export async function arrivalXlsx(template: ArrayBuffer, day: string, list: Arri
     r.getCell("F").value = a.children || null;
     r.getCell("G").value = a.eta === "no time" ? a.eta : excelTime(a.eta);
     r.getCell("H").value = excelDate(a.arrival);
-    r.getCell("I").value = excelDate(a.departure);
+    r.getCell("I").value = a.consecutive ? `${longDate(a.consecutive)} (Consecutive)` : excelDate(a.departure);
     r.getCell("G").numFmt = "h:mm"; // set, not inherited: added rows must look the same
     r.getCell("H").numFmt = DATE_FORMAT;
     r.getCell("I").numFmt = DATE_FORMAT;

@@ -92,6 +92,14 @@
     .source { color: var(--muted); font-size: .8125rem; margin: 0 0 6px; overflow-wrap: anywhere; }
     .flag { display: inline-block; background: var(--warn-bg); color: var(--warn-ink); font-size: .8125rem; font-weight: 600; padding: 2px 8px; border-radius: 6px; margin: 0 0 6px; }
     .sub .flag { margin: 4px 6px 0 0; padding: 1px 6px; font-size: .75rem; }
+    .recent { margin-top: 20px; }
+    .recent h3 { margin: 0 0 8px; font-size: .9375rem; }
+    .recent ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
+    .recent li { display: flex; gap: 8px; align-items: stretch; }
+    .recent-open { flex: 1; min-height: 44px; display: flex; flex-direction: column; align-items: flex-start; gap: 2px; padding: 10px 14px; border: 1px solid var(--line); border-radius: 12px; background: var(--surface); color: inherit; font: inherit; text-align: left; cursor: pointer; overflow-wrap: anywhere; }
+    .recent-open:hover { background: var(--accent-soft); border-color: var(--accent); }
+    .recent-open span { font-size: .8125rem; color: var(--muted); }
+    .recent-del { min-height: 44px; padding: 0 12px; border: 1px solid var(--line); border-radius: 12px; background: none; color: var(--muted); font: inherit; font-size: .8125rem; cursor: pointer; }
     .link { background: none; border: 0; padding: 0; color: inherit; text-decoration: underline; font-weight: 650; cursor: pointer; }
 
     /* villa list: one row per villa, bedrooms and guests on the right */
@@ -190,6 +198,7 @@
       <button type="button" id="downloadBtn" class="btn icon-only" data-open="downloads" aria-label="Download PDFs" hidden>
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 4v11M7 10l5 5 5-5M5 20h14"/></svg>
       </button>
+      <button type="button" id="closeBtn" class="btn" hidden>Close</button>
       <label class="btn primary">Open PDF<input id="file" type="file" accept="application/pdf,.pdf"></label>
     </div>
     <div id="result-head" hidden>
@@ -211,7 +220,7 @@
     <p id="status" class="status" role="status"></p>
     <section id="empty" class="empty">
       <h2>What do you need from today's report?</h2>
-      <p>Pick one, then open the Enhanced Pre Arrival Report. The PDF stays on this phone, and the app remembers it until you open a new one.</p>
+      <p>Pick one, then open the Enhanced Pre Arrival Report. The PDF stays on this phone.</p>
       <div class="tiles">
         <label class="tile" data-start="villas">
           <svg viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 12v26M6 30h36v8M42 30v-6a5 5 0 0 0-5-5H22v11"/><circle cx="14" cy="23" r="4"/></svg>
@@ -226,6 +235,10 @@
           <input type="file" accept="application/pdf,.pdf">
         </label>
       </div>
+      <section id="recent" class="recent" hidden>
+        <h3>Recent reports</h3>
+        <ul id="recentList"></ul>
+      </section>
       <p id="homeVersion" class="version"></p>
     </section>
     <section id="result" hidden>
@@ -287,8 +300,8 @@
       </div>
       <div id="s-phone" role="tabpanel" hidden>
       <h3>This phone</h3>
-      <p class="hint">The last report you opened is kept on this phone and reopens next time. Nothing is uploaded unless you report a problem.</p>
-      <button type="button" id="forgetReport" class="link" hidden>Forget this report</button>
+      <p class="hint">The last 10 different reports you opened are kept on this phone; pick one on the home screen. The same PDF counts once. Nothing is uploaded unless you report a problem.</p>
+      <button type="button" id="forgetReport" class="link">Forget all saved reports</button>
       <p id="version" class="version"></p>
       </div>
       <footer>

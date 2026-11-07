@@ -49,6 +49,17 @@ function block(texts: string[], starts: number[], line: number): string[] {
   return texts.slice(line + 1, end);
 }
 
+const MONTHS = ["jan", "feb", "mar", "apr", "may", "jun", "jul", "aug", "sep", "oct", "nov", "dec"];
+
+// "Party 3106883: consecutive bookings (06-10 Nov 2026)": the guests stay on in a follow-up booking, so the real
+// departure is the end of that range ("10 Nov 2026" -> "10/11/26"), not this row's Dep. Date.
+export function consecutiveDeparture(text: string): string | null {
+  const m = text.match(/consecutive bookings?\s*\([^)]*?(\d{1,2})\s*([A-Za-z]{3})[a-z]*\.?\s*(\d{4})\s*\)/i);
+  const month = m ? MONTHS.indexOf(m[2].toLowerCase()) + 1 : 0;
+  if (!m || !month) return null;
+  return [m[1].padStart(2, "0"), String(month).padStart(2, "0"), m[3].slice(2)].join("/");
+}
+
 function arrivalRow(v: Villa, texts: string[], starts: number[], row: Row): ArrivalRow {
   const own = block(texts, starts, row.line);
   const conf = own.find((t) => /^\d{6,8}\s/.test(t)) ?? "";
@@ -65,7 +76,7 @@ function arrivalRow(v: Villa, texts: string[], starts: number[], row: Row): Arri
     children: v.children,
     eta: eta === "14:59" || !eta ? "no time" : eta,
     arrival: row.arrival,
-    departure: row.departure,
+    departure: consecutiveDeparture(all) ?? row.departure,
     remark,
     codes: codes.length ? codes : [DEFAULT_CODE],
   };

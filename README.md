@@ -21,7 +21,8 @@ phones keep their settings.
   every guest cleared) from the report, one file per arrival date named by the date (`06-11-2026.xlsx`); "All days" makes
   them all. Only what the PDF says is filled (room, bedrooms if more than 1, name, adults, children, ETA, dates,
   transfer, AM codes); status, amenity detail and the food and drink sheets stay for staff. The column rules live in
-  `COLUMNS` in `src/excel.ts` and are listed in Settings > "Excel columns". A day with more than 17 villas adds rows.
+  `COLUMNS` in `src/excel.ts` and are listed in Settings > "Excel columns". A day with more than 17 villas adds rows. A booking whose comment says "consecutive bookings (06-10 Nov 2026)" gets the
+  last date of that range as DEPT DATE instead of the row's Dep. Date.
 - **Downloads**: `beds-guests_YYYY-MM-DD.pdf` (printable A4 list with a tick box per villa) and
   `beds-guests-evidence_YYYY-MM-DD.pdf` (the list, then the boxed report). On iPhone they open the share sheet.
 - **Memory**: the last report is kept in IndexedDB and reopens at start; Settings > "Forget this report" removes it.

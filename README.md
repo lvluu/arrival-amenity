@@ -1,9 +1,9 @@
-# Beds & Guests
+# Arrival Amenity
 
 PWA that reads the Opera "Enhanced Pre Arrival Report" PDF and lists, per arriving villa, the **bedrooms** and the
 **guests** (adults + children). Staff use it to prepare each villa (fruit, amenities) before arrival.
 
-Formerly "Arrival Fruit": the Worker, URL and on-phone storage keys keep the old `arrival-fruit` name so installed
+Formerly "Arrival Fruit" and "Beds & Guests" (repo `lvluu/arrival-amenity`): the Worker, URL and on-phone storage keys keep the old `arrival-fruit` name so installed
 phones keep their settings.
 
 - **Several days**: a report with more than one "Arrival Date" section shows one button per day; each day has its

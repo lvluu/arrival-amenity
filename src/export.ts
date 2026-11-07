@@ -141,7 +141,7 @@ function villaRow(page: PDFPage, f: Fonts, v: Villa, lines: Line[], y: number, z
 
 function footer(pages: PDFPage[], f: Fonts) {
   pages.forEach((p, i) => {
-    text(p, "Beds & Guests", M, 28, 8, f.regular, MUTED);
+    text(p, "Arrival Amenity", M, 28, 8, f.regular, MUTED);
     right(p, `Page ${i + 1} of ${pages.length}`, A4[0] - M, 28, 8, f.regular, MUTED);
   });
 }

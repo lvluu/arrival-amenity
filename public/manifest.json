@@ -1,5 +1,5 @@
 {
-  "name": "Beds & Guests",
+  "name": "Arrival Amenity",
   "short_name": "Beds",
   "description": "Bedrooms and guests per arriving villa, from the Enhanced Pre Arrival Report PDF",
   "start_url": "./",

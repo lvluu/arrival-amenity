@@ -1,6 +1,6 @@
 import { expect, test } from "bun:test";
 import ExcelJS from "exceljs";
-import { arrivalRows, arrivalXlsx, longDate, xlsxName } from "../src/excel";
+import { arrivalRows, arrivalXlsx, consecutiveDeparture, longDate, xlsxName } from "../src/excel";
 import { parseRows, summarize } from "../src/parse";
 import { DEFAULTS } from "../src/settings";
 
@@ -135,4 +135,22 @@ test("the template ships no guest names", async () => {
     ),
   );
   expect(names).toEqual([]);
+});
+
+test("consecutive booking is found; the sheet departure stays the row's", () => {
+  expect(consecutiveDeparture("Party 3106883: consecutive bookings (06-10 Nov 2026)")).toBe("10/11/26");
+  expect(consecutiveDeparture("consecutive booking (30 Oct - 02 Nov 2026)")).toBe("02/11/26");
+  expect(consecutiveDeparture("Party 1: family travelling together")).toBeNull();
+  const t = [
+    "Arrival Date 06/11/26",
+    "5220 *Doe,Fer,Mr. 06/11/26 08/11/26 2 VK 2 0 1 SPE WEB EMP EMPECE26 USD 129 CA 0",
+    "3079383 10 EMPECE26 12:30 Own transfer",
+    "Res. Comments Reservation Party 3106883: consecutive bookings (06-10 Nov 2026)",
+    "4200 Roe,Kai,Mr. 06/11/26 09/11/26 4 VK 2 0 1 WHO EM DPG WO20D USD 568 CA 0",
+  ];
+  const r = parseRows(t);
+  expect(arrivalRows(summarize(r, DEFAULTS), r, t).map((a) => [a.departure, a.consecutive])).toEqual([
+    ["08/11/26", "10/11/26"],
+    ["09/11/26", null],
+  ]);
 });

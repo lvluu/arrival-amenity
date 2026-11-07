@@ -61,9 +61,14 @@ function guestWords(v: Villa): string {
   return `${plural(v.adults, "adult")}${kids}`;
 }
 
+let consecutive = new Map<string, string>(); // room -> real departure, for villas with a consecutive booking
+
 function villaItem(v: Villa): string {
   const sum = v.lines.length > 1 ? `, ${v.lines.length} rows: ${v.rowGuests.join(" + ")}` : "";
-  const flag = v.checkType ? `<span class="flag">New type: check bedrooms</span>` : "";
+  const until = consecutive.get(v.room);
+  const flag =
+    (v.checkType ? `<span class="flag">New type: check bedrooms</span>` : "") +
+    (until ? `<span class="flag">Consecutive booking, leaves ${esc(longDate(until))}</span>` : "");
   return `<li><details data-room="${esc(v.room)}"${openRooms.has(v.room) ? " open" : ""}>
     <summary>
       <span class="villa"><b>${esc(v.room)}</b><span class="type">${esc(v.roomType)}</span></span>
@@ -139,7 +144,7 @@ function renderExcel() {
     .map(
       (a) => `<tr><td><b>${esc(a.room)}</b>${a.bedrooms > 1 ? `<br>${a.bedrooms}` : ""}</td><td>${esc(a.name)}</td>
       <td>${a.adults}</td><td>${a.children || ""}</td><td>${esc(a.eta)}</td><td>${esc(longDate(a.arrival))}</td>
-      <td>${esc(longDate(a.departure))}</td><td>${esc(a.remark)}</td><td>${esc(a.codes.join(" "))}</td></tr>`,
+      <td>${esc(longDate(a.departure))}${a.consecutive ? ` <span class="flag">Consecutive</span>` : ""}</td><td>${esc(a.remark)}</td><td>${esc(a.codes.join(" "))}</td></tr>`,
     )
     .join("");
   const days = arrivalDates(rows);
@@ -209,6 +214,13 @@ function render() {
   summary = summarize(
     rows.filter((r) => r.arrival === day),
     settings,
+  );
+  consecutive = new Map(
+    arrivalRows(
+      summary,
+      rows,
+      lines.map((l) => l.text),
+    ).flatMap((a) => (a.consecutive ? [[a.room, a.consecutive] as const] : [])),
   );
   files = null;
   sheets = new Map();

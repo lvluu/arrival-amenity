@@ -1,9 +1,9 @@
-# Beds & Guests
+# Arrival Amenity
 
 PWA that reads the Opera "Enhanced Pre Arrival Report" PDF and lists, per arriving villa, the **bedrooms** and the
 **guests** (adults + children). Staff use it to prepare each villa (fruit, amenities) before arrival.
 
-Formerly "Arrival Fruit": the Worker, URL and on-phone storage keys keep the old `arrival-fruit` name so installed
+Formerly "Arrival Fruit" and "Beds & Guests" (repo `lvluu/arrival-amenity`): the Worker, URL and on-phone storage keys keep the old `arrival-fruit` name so installed
 phones keep their settings.
 
 - **Several days**: a report with more than one "Arrival Date" section shows one button per day; each day has its
@@ -13,6 +13,8 @@ phones keep their settings.
 - **Bedrooms** come from the room type table in Settings. A room type the table does not have is added automatically
   with the last number in its code (RP4 = 4, VM1B = 1, none = 1) and marked "New, check" until someone taps OK or
   changes it. Saved per phone (localStorage); bug reports carry the table, so the full list builds up over time.
+- **Consecutive booking**: a villa whose comment says "consecutive bookings (06-10 Nov 2026)" shows a flag with the real
+  departure (the end of that range) in the Count beds list. The Excel file keeps the row's Dep. Date.
 - **Evidence**: tap a villa to see its PDF rows cut out with red boxes (row, room type, adults + children) and the
   math; the "PDF pages" tab shows full pages.
 - **Home**: two tiles, "Count beds" and "Excel"; pick one, choose the PDF, and the app opens on that feature.

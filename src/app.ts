@@ -1,11 +1,11 @@
 import { sendBug } from "./bug-report";
 import { type Kind, prepare, save } from "./downloads";
-import { cropRow, markPage, release } from "./evidence";
-import { arrivalRows, arrivalXlsx, COLUMNS, longDate, OTHER_RULES, xlsxName } from "./excel";
+import { cropComment, cropRow, markPage, release } from "./evidence";
+import { arrivalRows, arrivalXlsx, COLUMNS, consecutiveLines, longDate, OTHER_RULES, xlsxName } from "./excel";
 import { arrivalDates, mainLine, parseRows, type Row, reportDate, type Summary, summarize, type Villa } from "./parse";
 import { type Line, openPdf, type PageImage, type PDFDocumentProxy, readLines, renderPage } from "./pdf";
 import { confirm, DEFAULTS, loadSettings, type Settings, sanitize, saveSettings, withDetected } from "./settings";
-import { clearReport, loadReport, saveReport } from "./store";
+import { clearReports, deleteReport, listReports, saveReport } from "./store";
 import { watchUpdates } from "./updates";
 
 const SCALE = 2; // sharp crops on phones, within iPhone Safari's canvas memory limit
@@ -37,7 +37,7 @@ function clearMarked() {
 function markedPage(p: number): HTMLCanvasElement | null {
   const src = pages.get(p);
   if (!src) return null;
-  const hit = marked.get(p) ?? markPage(src, p, summary.villas, lines);
+  const hit = marked.get(p) ?? markPage(src, p, summary.villas, lines, [...notes.values()].flat());
   marked.set(p, hit);
   return hit;
 }
@@ -62,6 +62,7 @@ function guestWords(v: Villa): string {
 }
 
 let consecutive = new Map<string, string>(); // room -> real departure, for villas with a consecutive booking
+let notes = new Map<string, number[]>(); // room -> report lines with a "consecutive bookings" comment, circled red on the PDF
 
 function villaItem(v: Villa): string {
   const sum = v.lines.length > 1 ? `, ${v.lines.length} rows: ${v.rowGuests.join(" + ")}` : "";
@@ -112,6 +113,19 @@ function fillProof(d: HTMLDetailsElement) {
     fig.append(strip, link);
     proof.append(fig);
   }
+  for (const l of notes.get(v.room) ?? []) {
+    const { page } = lines[l];
+    const src = pages.get(page);
+    const m = markedPage(page);
+    if (!src || !m) continue;
+    const strip = cropComment(m, src, lines[l]);
+    strip.setAttribute("role", "img");
+    strip.setAttribute("aria-label", "Consecutive booking comment circled in red");
+    const fig = document.createElement("div");
+    fig.className = "strip";
+    fig.append(strip);
+    proof.append(fig);
+  }
 }
 
 function renderPages() {
@@ -144,7 +158,7 @@ function renderExcel() {
     .map(
       (a) => `<tr><td><b>${esc(a.room)}</b>${a.bedrooms > 1 ? `<br>${a.bedrooms}` : ""}</td><td>${esc(a.name)}</td>
       <td>${a.adults}</td><td>${a.children || ""}</td><td>${esc(a.eta)}</td><td>${esc(longDate(a.arrival))}</td>
-      <td>${esc(longDate(a.departure))}${a.consecutive ? ` <span class="flag">Consecutive</span>` : ""}</td><td>${esc(a.remark)}</td><td>${esc(a.codes.join(" "))}</td></tr>`,
+      <td>${esc(a.consecutive ? `${longDate(a.consecutive)} (Consecutive)` : longDate(a.departure))}</td><td>${esc(a.remark)}</td><td>${esc(a.codes.join(" "))}</td></tr>`,
     )
     .join("");
   const days = arrivalDates(rows);
@@ -222,10 +236,15 @@ function render() {
       lines.map((l) => l.text),
     ).flatMap((a) => (a.consecutive ? [[a.room, a.consecutive] as const] : [])),
   );
+  notes = consecutiveLines(
+    summary,
+    rows,
+    lines.map((l) => l.text),
+  );
   files = null;
   sheets = new Map();
   clearMarked();
-  for (const id of ["result", "result-head", "downloadBtn", "forgetReport"]) $(id).hidden = false;
+  for (const id of ["result", "result-head", "downloadBtn", "closeBtn"]) $(id).hidden = false;
   $("empty").hidden = true;
   const t = summary.totals;
   $("tBeds").textContent = String(t.bedrooms);
@@ -453,14 +472,35 @@ async function showReport(name: string, bytes: Uint8Array, note: string) {
   render();
 }
 
-function forgetReport() {
+// Back to the home screen. The report stays in the saved list.
+function closeReport() {
   for (const img of pages.values()) release(img.canvas);
   clearMarked();
   [doc, original, lines, rows, pages, files] = [null, null, [], [], new Map(), null];
-  for (const id of ["result", "result-head", "downloadBtn", "forgetReport"]) $(id).hidden = true;
+  for (const id of ["result", "result-head", "downloadBtn", "closeBtn"]) $(id).hidden = true;
   $("empty").hidden = false;
+  $("status").textContent = "";
   $<HTMLDialogElement>("settings").close();
-  clearReport().catch(() => {}); // nothing saved, or storage blocked: nothing to forget
+  renderRecent().catch(() => {});
+}
+
+function forgetReports() {
+  closeReport();
+  clearReports()
+    .catch(() => {}) // nothing saved, or storage blocked: nothing to forget
+    .then(renderRecent);
+}
+
+async function renderRecent() {
+  const list = await listReports();
+  $("recent").hidden = list.length === 0;
+  $("recentList").innerHTML = list
+    .map((r) => {
+      const when = new Date(r.savedAt).toLocaleString("en-GB", { dateStyle: "medium", timeStyle: "short" });
+      return `<li><button type="button" class="recent-open" data-id="${esc(r.id)}"><b>${esc(r.name)}</b><span>Opened ${esc(when)}</span></button>
+      <button type="button" class="recent-del" data-id="${esc(r.id)}" aria-label="Remove ${esc(r.name)} from this phone">Remove</button></li>`;
+    })
+    .join("");
 }
 
 document.addEventListener("change", async (e) => {
@@ -474,21 +514,30 @@ document.addEventListener("change", async (e) => {
   if (start && doc) showTab(start);
   if (!doc) return;
   try {
-    await saveReport({ name: file.name, bytes, savedAt: Date.now() });
+    await saveReport(file.name, bytes);
+    await renderRecent(); // a quick Close can have drawn the list before the save finished
   } catch {
     $("source").textContent += " (not saved: storage is blocked on this browser)";
   }
 });
 
-$("forgetReport").addEventListener("click", forgetReport);
+$("forgetReport").addEventListener("click", forgetReports);
+$("closeBtn").addEventListener("click", closeReport);
+$("recentList").addEventListener("click", async (e) => {
+  const btn = (e.target as HTMLElement).closest<HTMLButtonElement>("button[data-id]");
+  if (!btn) return;
+  const id = btn.dataset.id ?? "";
+  if (btn.classList.contains("recent-del")) {
+    await deleteReport(id).catch(() => {});
+    return void (await renderRecent());
+  }
+  const r = (await listReports()).find((x) => x.id === id);
+  if (!r) return;
+  await showReport(r.name, r.bytes, ". Opened from this phone.");
+  await saveReport(r.name, r.bytes).catch(() => {}); // moves it to the top of the list
+});
 
 render();
-loadReport()
-  .then((saved) => {
-    if (!saved) return;
-    const when = new Date(saved.savedAt).toLocaleString("en-GB", { dateStyle: "medium", timeStyle: "short" });
-    return showReport(saved.name, saved.bytes, `. Reopened from this phone, opened ${when}.`);
-  })
-  .catch(() => {}); // storage blocked or empty: start on the open screen
+renderRecent().catch(() => {}); // storage blocked or empty: no list, just the tiles
 $("homeVersion").textContent = `Version ${APP_VERSION}`;
 watchUpdates($("updateBar"), $<HTMLButtonElement>("updateBtn")).catch(() => {}); // no service worker: no offline/updates

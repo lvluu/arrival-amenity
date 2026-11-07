@@ -14,7 +14,7 @@ one start with empty settings on the new URL). The on-phone storage keys keep th
   with the last number in its code (RP4 = 4, VM1B = 1, none = 1) and marked "New, check" until someone taps OK or
   changes it. Saved per phone (localStorage); bug reports carry the table, so the full list builds up over time.
 - **Consecutive booking**: a villa whose comment says "consecutive bookings (06-10 Nov 2026)" shows a flag with the real
-  departure (the end of that range) in the Count beds list. The Excel file keeps the row's Dep. Date.
+  departure (the end of that range) in the Count beds list, and the comment is circled red on the PDF evidence. The Excel DEPT DATE says the same, written `10/11/2026 (Consecutive)`.
 - **Evidence**: tap a villa to see its PDF rows cut out with red boxes (row, room type, adults + children) and the
   math; the "PDF pages" tab shows full pages.
 - **Home**: two tiles, "Count beds" and "Excel"; pick one, choose the PDF, and the app opens on that feature.
@@ -26,7 +26,7 @@ one start with empty settings on the new URL). The on-phone storage keys keep th
   `COLUMNS` in `src/excel.ts` and are listed in Settings > "Excel columns". A day with more than 17 villas adds rows.
 - **Downloads**: `beds-guests_YYYY-MM-DD.pdf` (printable A4 list with a tick box per villa) and
   `beds-guests-evidence_YYYY-MM-DD.pdf` (the list, then the boxed report). On iPhone they open the share sheet.
-- **Memory**: the last report is kept in IndexedDB and reopens at start; Settings > "Forget this report" removes it.
+- **Memory**: the last 10 different reports are kept in IndexedDB (the same PDF, by SHA-256, counts once). The app starts on the home screen, which lists them under "Recent reports"; tap one to open it, "Remove" drops it, "Close" in the header returns home, Settings > "Forget all saved reports" clears the list.
 - **Updates**: every build stamps a new `BUILD_ID` into `sw.js`, so phones notice a deploy and show "A new version is
   ready. Update".
 - **Report a problem**: sends the description, what the app showed and (if ticked) the PDF to `POST /api/bug`. The

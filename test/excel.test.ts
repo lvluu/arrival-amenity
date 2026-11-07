@@ -137,7 +137,7 @@ test("the template ships no guest names", async () => {
   expect(names).toEqual([]);
 });
 
-test("consecutive booking replaces the departure date", () => {
+test("consecutive booking is found; the sheet departure stays the row's", () => {
   expect(consecutiveDeparture("Party 3106883: consecutive bookings (06-10 Nov 2026)")).toBe("10/11/26");
   expect(consecutiveDeparture("consecutive booking (30 Oct - 02 Nov 2026)")).toBe("02/11/26");
   expect(consecutiveDeparture("Party 1: family travelling together")).toBeNull();
@@ -149,5 +149,8 @@ test("consecutive booking replaces the departure date", () => {
     "4200 Roe,Kai,Mr. 06/11/26 09/11/26 4 VK 2 0 1 WHO EM DPG WO20D USD 568 CA 0",
   ];
   const r = parseRows(t);
-  expect(arrivalRows(summarize(r, DEFAULTS), r, t).map((a) => a.departure)).toEqual(["10/11/26", "09/11/26"]);
+  expect(arrivalRows(summarize(r, DEFAULTS), r, t).map((a) => [a.departure, a.consecutive])).toEqual([
+    ["08/11/26", "10/11/26"],
+    ["09/11/26", null],
+  ]);
 });

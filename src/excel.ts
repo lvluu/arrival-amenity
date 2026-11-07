@@ -35,6 +35,7 @@ export interface ArrivalRow {
   eta: string; // "17:30" or "no time"
   arrival: string; // dd/mm/yy
   departure: string;
+  consecutive: string | null; // departure of a "consecutive bookings" comment (shown in the app only, not in the xlsx)
   remark: string;
   codes: string[];
 }
@@ -68,6 +69,7 @@ function arrivalRow(v: Villa, texts: string[], starts: number[], row: Row): Arri
   const all = v.lines.flatMap((l) => block(texts, starts, l)).join(" ");
   const codes = [...new Set([...all.matchAll(/\bAM(\d+)\b/g)].map((m) => m[1]))];
   const DEFAULT_CODE = "10"; // standard amenity, what staff write when the report names none
+  const consecutive = consecutiveDeparture(all);
   return {
     room: v.room,
     bedrooms: v.bedrooms,
@@ -76,7 +78,8 @@ function arrivalRow(v: Villa, texts: string[], starts: number[], row: Row): Arri
     children: v.children,
     eta: eta === "14:59" || !eta ? "no time" : eta,
     arrival: row.arrival,
-    departure: consecutiveDeparture(all) ?? row.departure,
+    departure: row.departure,
+    consecutive,
     remark,
     codes: codes.length ? codes : [DEFAULT_CODE],
   };

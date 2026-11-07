@@ -13,6 +13,8 @@ phones keep their settings.
 - **Bedrooms** come from the room type table in Settings. A room type the table does not have is added automatically
   with the last number in its code (RP4 = 4, VM1B = 1, none = 1) and marked "New, check" until someone taps OK or
   changes it. Saved per phone (localStorage); bug reports carry the table, so the full list builds up over time.
+- **Consecutive booking**: a villa whose comment says "consecutive bookings (06-10 Nov 2026)" shows a flag with the real
+  departure (the end of that range) in the Count beds list. The Excel file keeps the row's Dep. Date.
 - **Evidence**: tap a villa to see its PDF rows cut out with red boxes (row, room type, adults + children) and the
   math; the "PDF pages" tab shows full pages.
 - **Home**: two tiles, "Count beds" and "Excel"; pick one, choose the PDF, and the app opens on that feature.
@@ -21,8 +23,7 @@ phones keep their settings.
   every guest cleared) from the report, one file per arrival date named by the date (`06-11-2026.xlsx`); "All days" makes
   them all. Only what the PDF says is filled (room, bedrooms if more than 1, name, adults, children, ETA, dates,
   transfer, AM codes); status, amenity detail and the food and drink sheets stay for staff. The column rules live in
-  `COLUMNS` in `src/excel.ts` and are listed in Settings > "Excel columns". A day with more than 17 villas adds rows. A booking whose comment says "consecutive bookings (06-10 Nov 2026)" gets the
-  last date of that range as DEPT DATE instead of the row's Dep. Date.
+  `COLUMNS` in `src/excel.ts` and are listed in Settings > "Excel columns". A day with more than 17 villas adds rows.
 - **Downloads**: `beds-guests_YYYY-MM-DD.pdf` (printable A4 list with a tick box per villa) and
   `beds-guests-evidence_YYYY-MM-DD.pdf` (the list, then the boxed report). On iPhone they open the share sheet.
 - **Memory**: the last report is kept in IndexedDB and reopens at start; Settings > "Forget this report" removes it.
